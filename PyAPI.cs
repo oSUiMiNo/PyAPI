@@ -38,7 +38,9 @@ public class PyAPI
     // シェアログ読み取りタイミングのハンドラ
     static IObservable<long> OnRead => logActive.UpdateWhileEqualTo(Log.isActive, 0.05f);
     static BoolReactiveProperty logActive = new BoolReactiveProperty(true);
-
+    //==================================================
+    // コンストラクタ
+    //==================================================
     public PyAPI(string pyDir, string pyInterpFile = "")
     {
         PyDir = pyDir;
@@ -134,6 +136,7 @@ public class PyFnc
     //==================================================
     // パブリック
     //==================================================
+    // .py ファイル名を Fnc 名とする
     public string FncName { get; private set; }
     // 戻り値が書き込まれるファイル
     public string OutPath { get; private set; }
