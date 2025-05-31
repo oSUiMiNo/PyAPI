@@ -41,6 +41,8 @@ public class PyAPI
     //==================================================
     // コンストラクタ
     //==================================================
+    /// <param name="pyDir">ラップする .py ファイルのがある Dir</param>
+    /// <param name="pyInterpFile">Python のインタプリタ</param>
     public PyAPI(string pyDir, string pyInterpFile = "")
     {
         PyDir = pyDir;
