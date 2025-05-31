@@ -1,28 +1,39 @@
-using UnityEngine;
 using System.Collections.Generic;
-using System.IO;
+using UnityEngine;
 using System;
+using System.IO;
 using Newtonsoft.Json.Linq;
-using Cysharp.Threading.Tasks;
 using UniRx;
+using Cysharp.Threading.Tasks;
 
 
+//****************************************************
+// 他言語のコードのログを Unity のコンソールに表示する
+// 1インスタンスにつき1ログシェアファイルを扱う
+//****************************************************
 public class SharedLog
 {
-    string LogPath; // 監視するファイルのパス
+    // 監視するファイルのパス
+    string LogPath;
+    // 前回ログのタイムスタンプ
     DateTime lastWriteTime;
+    // ログが発生したら発火
     public Subject<string> OnLog = new Subject<string>();
+    // 本処理のアクティブ状態
     public bool isActive = false;
 
     public SharedLog(string logPath)
     {
         LogPath = logPath;
+        // ログシェアテキストファイル作成
         CreateLogFileAsync().Forget();
+        // アクティブということにする
         isActive = true;
     }
 
-
-
+    //==================================================
+    // ログシェア用のテキストファイル作成
+    //==================================================
     async UniTask CreateLogFileAsync()
     {
         await UniTask.SwitchToThreadPool();
@@ -67,8 +78,11 @@ public class SharedLog
         await UniTask.SwitchToMainThread();
     }
 
-
-
+    //==================================================
+    // -> ログシェア用のテキストファイルの更新を検知
+    // -> OnLog にログを流す
+    // ※ 外部から任意のタイミングで呼ぶ
+    //==================================================
     public async void ReadLogFile()
     {
         await UniTask.SwitchToThreadPool();
@@ -85,18 +99,21 @@ public class SharedLog
         //        Debug.LogError($"ログファイル再作成失敗: {e.Message}");
         //        return;
         //    }
-
+        
+        // タイムスタンプとして前回ファイルにログが追記された日時を取得
         DateTime currentWriteTime = File.GetLastWriteTime(LogPath);
 
+        // 前回タイムスタンプから更新されていたら
         if (currentWriteTime != lastWriteTime)
         {
+            // タイムスタンプ更新
             lastWriteTime = currentWriteTime;
             try
             {
                 // 未処理部分を保持する変数
                 string unprocessedLogs = "";
 
-                // Python と同じtxtファイルを操作する際の競合を防止
+                // Python と同じ txt ファイルを操作する際の競合を防止
                 using (FileStream fs = new FileStream(LogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 using (StreamReader sr = new StreamReader(fs))
                 {
@@ -133,16 +150,16 @@ public class SharedLog
                     }
                 }
             }
-            catch (Exception e)
-            {
-                Debug.LogError($"ログ読み取りエラー: {e.Message}");
-            }
+            catch (Exception e) { Debug.LogError($"ログ読み取りエラー: {e.Message}"); }
         }
         await UniTask.SwitchToMainThread();
     }
 
-
-    // ログファイル削除
+    //==================================================
+    // -> Observable 終了
+    // -> ログファイル削除
+    // -> ガベコレ
+    //==================================================
     public async void Close()
     {
         await UniTask.SwitchToThreadPool();

@@ -7,9 +7,9 @@ using System.IO;
 using System;
 using System.Collections.Generic;
 using UniRx;
-using System.Security.Cryptography;
 using System.Text;
 using MyUtil;
+
 
 public class PyAPIHandler : SingletonCompo<PyAPIHandler>
 {
@@ -19,11 +19,25 @@ public class PyAPIHandler : SingletonCompo<PyAPIHandler>
 }
 
 
+//****************************************************
+// PyFnc を生成して待機させたりアイドルさせる
+//****************************************************
 public class PyAPI
 {
-    string PyInterpFile;
-    string PyDir;
-
+    //==================================================
+    // パブリック
+    //==================================================
+    public string PyInterpFile { get; }
+    public string PyDir { get; }
+    //==================================================
+    // スタティック-ローカル
+    //==================================================
+    static string LogPath => $"{Application.dataPath}/PyLog.txt";
+    // Python ログ表示用インスタンス
+    static SharedLog Log = new SharedLog(LogPath);
+    // シェアログ読み取りタイミングのハンドラ
+    static IObservable<long> OnRead => logActive.UpdateWhileEqualTo(Log.isActive, 0.05f);
+    static BoolReactiveProperty logActive = new BoolReactiveProperty(true);
 
     public PyAPI(string pyDir, string pyInterpFile = "")
     {
@@ -69,11 +83,9 @@ public class PyAPI
         return pyFnc;
     }
 
-
-    static string LogPath => $"{Application.dataPath}/PyLog.txt"; // 監視するファイル
-    static SharedLog Log = new SharedLog(LogPath);
-    static IObservable<long> OnRead => logActive.UpdateWhileEqualTo(Log.isActive, 0.05f);
-    static BoolReactiveProperty logActive = new BoolReactiveProperty(true);
+    //==================================================
+    // 
+    //==================================================
     public static void InitLog()
     {
         OnRead.Subscribe(_ =>
@@ -88,6 +100,10 @@ public class PyAPI
             Debug.Log(msg.HexColor("#90E3C4"));
         }).AddTo(PyAPIHandler.Compo);
     }
+
+    //==================================================
+    // 
+    //==================================================
     public static async void Close()
     {
         // 終了時はは待ち時間0じゃないとパッケージ利用先で実行されない
@@ -101,24 +117,46 @@ public class PyAPI
 }
 
 
-
+//****************************************************
+// Python プロセスのラッパ
+// 1つの .py ファイルにつき (場合により) 複数のプロセスを作成し
+// それらを1つの関数 (PyFnc インスタンス) としてラップ
+//****************************************************
 public class PyFnc
 {
-    static List<PyFnc> IdolingFncs = new List<PyFnc>();
+    //==================================================
+    // スタティック-ローカル
+    //==================================================
+    // アイドル中の PyFnc インスタンス管理
+    static List<PyFnc> IdolingFncs = new();
+    // 引数を渡すファイルを1Fncにつき複数使う
     static int InPathNum = 0;
-
+    //==================================================
+    // パブリック
+    //==================================================
     public string FncName { get; private set; }
-    public string OutPath { get; private set; } // 監視するファイル
-    float Timeout = 0;
-    SharedLog Output;
-
+    // 戻り値が書き込まれるファイル
+    public string OutPath { get; private set; }
+    //==================================================
+    // プライベート
+    //==================================================
+    // 子プロセス管理
+    List<System.Diagnostics.Process> children = new();
+    // 子プロセスのインデックス
     int currentChildIndex = 0;
-    List<System.Diagnostics.Process> children = new List<System.Diagnostics.Process>();
-    CancellationTokenSource cts = new CancellationTokenSource();
-
+    // タイムアウト時間
+    float Timeout = 0;
+    // 実行キャンセル用トークン
+    CancellationTokenSource cts = new();
+    // アウトプット監視用
+    SharedLog Output;
+    // アウトプット読み取りタイミングのハンドラ
     IObservable<long> OnRead => logActive.TimerWhileEqualTo(Output.isActive, 0.01f);
-    BoolReactiveProperty logActive = new BoolReactiveProperty(true);
+    BoolReactiveProperty logActive = new(true);
 
+    //==================================================
+    // アウトプットに戻り値が来たら流す
+    //==================================================
     public IObservable<JObject> OnOut => Output.OnLog
     .Select(msg =>
     {
@@ -136,6 +174,9 @@ public class PyFnc
     .Where(JO => JO != null)
     .Where(JO => JO["Loaded"] == null);
 
+    //==================================================
+    // アウトプットにプロセスのロード完了通知が来たら流す
+    //==================================================
     public IObservable<JObject> OnLoad => Output.OnLog
     .Select(msg =>
     {
@@ -153,7 +194,9 @@ public class PyFnc
     .Where(JO => JO != null)
     .Where(JO => JO["Loaded"] != null);
 
-
+    //==================================================
+    // PyFnc インスタンス作成
+    //==================================================
     public static async UniTask<PyFnc> Create(string pyInterpFile, string pyFile, JObject inJO = null, int processCount = 1, int threadCount = 1, float timeout = 0, bool largeInput = false)
     {
         await UniTask.SwitchToThreadPool();
@@ -181,7 +224,6 @@ public class PyFnc
         inJO["ThreadCount"] = threadCount;
         inJO["LargeInput"] = largeInput;
         inJO["InPath"] = inPath;
-
 
         // ["] を [\""] にエスケープしたJson
         string sendData = JsonConvert.SerializeObject(inJO).Replace("\"", "\\\"\"");
@@ -214,9 +256,10 @@ public class PyFnc
         return newFnc;
     }
 
-
+    //==================================================
     // 全プロセスの7割以上がロード完了するまで待つ
     // Create 内でawait すると何故か onOut が発火しない
+    //==================================================
     public async UniTask WaitLoad(int completionRate)
     {
         if (completionRate < 1 || 10 < completionRate)
@@ -240,7 +283,9 @@ public class PyFnc
         onOut.Dispose();
     }
 
-
+    //==================================================
+    // 存在している全 PyFnc 終了
+    //==================================================
     public static void CloseAll(int waittMilliSecond)
     {
         foreach (var fnc in IdolingFncs)
@@ -250,6 +295,9 @@ public class PyFnc
         IdolingFncs.Clear();
     }
 
+    //==================================================
+    // 本 PyFunc 終了
+    //==================================================
     public async void Close(int waittMilliSecond)
     {
         await UniTask.SwitchToThreadPool();
@@ -271,6 +319,9 @@ public class PyFnc
         await UniTask.SwitchToMainThread();
     }
 
+    //==================================================
+    // 出力監視の設定
+    //==================================================
     void InitLog(string pyFile)
     {
         // アウトプット用ファイル作成;
@@ -284,6 +335,9 @@ public class PyFnc
         }).AddTo(PyAPIHandler.Compo);
     }
 
+    //==================================================
+    // 1PyFncインスタンスで管理する全プロセスを起動
+    //==================================================
     public async void Start()
     {
         foreach (var child in children)
@@ -301,7 +355,7 @@ public class PyFnc
     {
         JObject outJO = null;
 
-        // AddTo の中身はGOかCompoなのでメインスレッドじゃないとだめ
+        // AddTo の中身は GO か Compo なのでメインスレッドじゃないとだめ
         bool ThreadIsMain = false;
         if (Thread.CurrentThread.ManagedThreadId == 1) ThreadIsMain = true;
         if (!ThreadIsMain) await UniTask.SwitchToMainThread();
@@ -352,165 +406,14 @@ public class PyFnc
     {
         try
         {
-            // Close するために待機する
-            await children[currentChildIndex].RunAsync(Timeout, () => Output.Close(), cts.Token);
+            // Close するために待機
+            await children[currentChildIndex].ExeAsync(Timeout, () => Output.Close(), cts.Token);
         }
         catch (OperationCanceledException) { }
         if (currentChildIndex == children.Count - 1) currentChildIndex = 0;
         else currentChildIndex++;
+        
         Close(100);
         GC.Collect();
-    }
-}
-
-
-
-
-
-
-public static class ProcessExtentions
-{
-    public static async void Exe(this System.Diagnostics.Process process, JObject inputJObj)
-    {
-        if (process.StartInfo.RedirectStandardInput == false)
-        {
-            Debug.LogError("StartInfo.RedirectStandardInput を True にして");
-            return;
-        }
-        try
-        {
-            await UniTask.SwitchToThreadPool();
-            string sendData = JsonConvert.SerializeObject(inputJObj);
-            StreamWriter inputWriter = process.StandardInput;
-            inputWriter.WriteLine(sendData);
-            inputWriter.Flush();
-            await UniTask.SwitchToMainThread();
-        }
-        catch { }
-    }
-
-
-    public static async void Command(this System.Diagnostics.Process process, string command)
-    {
-        if (process.StartInfo.RedirectStandardInput == false)
-        {
-            Debug.LogError("StartInfo.RedirectStandardInput を True にして");
-            return;
-        }
-        try
-        {
-            await UniTask.SwitchToThreadPool();
-            StreamWriter inputWriter = process.StandardInput;
-            inputWriter.WriteLine(command);
-            inputWriter.Flush();
-            await UniTask.SwitchToMainThread();
-        }
-        catch { }
-    }
-
-
-    public static async UniTask RunAsync(this System.Diagnostics.Process process, float timeout = 0, Action fncOnDispose = null, CancellationToken externalCT = default)
-    {
-        await UniTask.SwitchToThreadPool();
-        var timeoutCTS = new CancellationTokenSource();
-        var exited = new UniTaskCompletionSource();
-
-        if (timeout != 0)
-            UniTask.RunOnThreadPool(() => process.Timeout(timeout, timeoutCTS.Token)).Forget();
-
-        process.EnableRaisingEvents = true;
-        process.Exited += (sender, args) =>
-        {
-            string error = process.StandardError.ReadToEnd();
-            if (!string.IsNullOrEmpty(error)) Debug.LogError($"PowerShell Error: {error}");
-            exited.TrySetResult();
-            process.PerfectKill();
-        };
-
-        process.Disposed += (sender, args) =>
-        {
-            timeoutCTS.Cancel();
-            fncOnDispose?.Invoke();
-        };
-
-        process.Start();
-
-        try
-        {
-            // 外部キャンセルを反映
-            await exited.Task.AttachExternalCancellation(externalCT);
-            Debug.Log($"プロセス完了");
-        }
-        catch (OperationCanceledException)
-        {
-            // 外部からキャンセルされた場合の処理
-            Debug.Log("外部からキャンセルされた");
-            process.PerfectKill();
-            // 必要に応じて例外を再スロー
-            throw;
-        }
-        await UniTask.SwitchToMainThread();
-    }
-
-
-    public static async void Timeout(this System.Diagnostics.Process process, float timeout, CancellationToken CT)
-    {
-        try
-        {
-            await UniTask.WaitForSeconds(timeout, false, PlayerLoopTiming.Update, CT);
-            Debug.LogAssertion("タイムアウト");
-            process.PerfectKill();
-        }
-        catch (OperationCanceledException)
-        {
-            Debug.Log("タイムアウトがキャンセルされた");
-        }
-    }
-
-
-    public static void PerfectKill(this System.Diagnostics.Process process)
-    {
-        try
-        {
-            // 既にKillされていた場合は無視される
-            process.Kill();
-        }
-        catch { /*Debug.Log("既に Kill されていた");*/ }
-        process.Dispose();
-    }
-
-
-
-
-    public static UniTask<string> RunAsync(this System.Diagnostics.Process process, float timeout = 0, Action fncOnDispose = null)
-    {
-        var cts = new CancellationTokenSource();
-        var exited = new UniTaskCompletionSource<string>();
-        string output = "";
-
-        if (timeout != 0)
-            UniTask.RunOnThreadPool(() => process.Timeout(timeout, cts.Token)).Forget();
-
-        // Exited イベントを有効にする
-        process.EnableRaisingEvents = true;
-        process.Exited += (sender, args) =>
-        {
-            string error = process.StandardError.ReadToEnd(); // エラー読取り
-            if (!string.IsNullOrEmpty(error)) Debug.LogError($"PowerShell Error: {error}");
-
-            output = process.StandardOutput.ReadToEnd();
-            process.Dispose();
-        };
-
-        process.Disposed += (sender, args) =>
-        {
-            exited.TrySetResult(output);
-            cts.Cancel();
-            fncOnDispose?.Invoke();
-        };
-
-        process.Start();
-
-        return exited.Task;
     }
 }
