@@ -24,12 +24,10 @@ public static class VEnvSetter
         string venvDir = $"{dir}/.venv";
         if (!Directory.Exists(venvDir))
         {
-            Debug.Log($".venv を生成...");
+            Debug.Log($".venv が無いので生成...");
             // 環境変数を気にせず pyenv 経由で python を起動してコマンドを実行
             await CommandUtil.ExeToolCommand("pyenv exec python -m venv .venv", dir);
         }
-        else
-            Debug.Log(".venv は既に存在する");
         //-------------------------------
         // requirements.txt が無ければスキップ
         //-------------------------------
@@ -57,9 +55,7 @@ public static class VEnvSetter
         // requirements.txt があれば全ライブラリインストール
         //-------------------------------
         Debug.Log("リストをもとに全ライブラリをインストール...");
-        await CommandUtil.ExeToolCommand(
-            $"{venvPy} -m pip install -r requirements.txt",
-            dir);
+        await CommandUtil.ExeToolCommand($"{venvPy} -m pip install -r requirements.txt", dir);
         Debug.Log($"VEnv セットアップ完了\n{dir}");
     }
 
@@ -94,7 +90,7 @@ public static class VEnvSetter
         return ok;
     }
 
-    // 「Package==Version」まで合わせて比較したいので正規化        ★
-    private static string NormalizePkg(string line) =>
+    // 「Package==Version」まで合わせて比較したいので正規化
+    static string NormalizePkg(string line) =>
         line.Replace(" ", "").Replace("\r", "").ToLowerInvariant();
 }
