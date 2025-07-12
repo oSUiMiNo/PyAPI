@@ -65,22 +65,30 @@ public static class VEnvSetter
     //================================================
     static async UniTask<bool> IsAlreadySatisfiedAsync(string venvPy, string reqPath, string dir)
     {
-        // A) requirements.txt を整形
+        // 「Package==Version」まで合わせて比較したいので正規化
+        string NormalizePkg(string line) =>
+            line.Replace(" ", "").Replace("\r", "").ToLowerInvariant();
+
+        //-------------------------------
+        // requirements.txt を整形
+        //-------------------------------
         var required = File.ReadLines(reqPath)
                            .Select(l => l.Split('#')[0].Trim())       // コメント除去
                            .Where(l => !string.IsNullOrWhiteSpace(l)) // 空行除去
                            .Select(NormalizePkg)
                            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        // B) venv の現状を取得
+        //-------------------------------
+        // venv の現状を取得
+        //-------------------------------
         string freeze = await CommandUtil.ExeToolCommand($"{venvPy} -m pip freeze", dir);
         var installed = freeze.Split('\n')
                               .Select(l => l.Trim())
                               .Where(l => !string.IsNullOrWhiteSpace(l))
                               .Select(NormalizePkg)
                               .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        // C) 差分チェック
+        //-------------------------------
+        // 差分チェック
+        //-------------------------------
         bool ok = required.IsSubsetOf(installed);
         if (!ok)
         {
@@ -89,8 +97,4 @@ public static class VEnvSetter
         }
         return ok;
     }
-
-    // 「Package==Version」まで合わせて比較したいので正規化
-    static string NormalizePkg(string line) =>
-        line.Replace(" ", "").Replace("\r", "").ToLowerInvariant();
 }
