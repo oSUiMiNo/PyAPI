@@ -29,6 +29,7 @@ public class PyAPI
     //==================================================
     public string PyInterpFile { get; }
     public string PyDir { get; }
+
     //==================================================
     // スタティック-ローカル
     //==================================================
@@ -38,6 +39,7 @@ public class PyAPI
     // シェアログ読み取りタイミングのハンドラ
     static IObservable<long> OnRead => logActive.UpdateWhileEqualTo(Log.isActive, 0.05f);
     static BoolReactiveProperty logActive = new BoolReactiveProperty(true);
+
     //==================================================
     // コンストラクタ
     //==================================================
