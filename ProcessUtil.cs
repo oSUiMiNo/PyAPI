@@ -74,6 +74,8 @@ public static class ProcessUtil
         process.EnableRaisingEvents = true;
         process.Exited += async (sender, args) =>
         {
+            // イベント発火タイミングのズレによるエラー防止で一旦確実に終了を待つ
+            process.WaitForExit();
             // エラー読取り -> ログ出力
             string error = await process.StandardError.ReadToEndAsync();
             if (!string.IsNullOrEmpty(error)) Debug.LogError($"PowerShell Error: {error}");
@@ -109,7 +111,6 @@ public static class ProcessUtil
                 throw new InvalidOperationException("Failed to start process.");
             }
         }
-        // 実行後エラー時
         catch (Exception)
         {
             timeoutCTS.Cancel();
@@ -172,6 +173,8 @@ public static class ProcessUtil
         process.EnableRaisingEvents = true;
         process.Exited += async (sender, args) =>
         {
+            // イベント発火タイミングのズレによるエラー防止で一旦確実に終了を待つ
+            process.WaitForExit();
             // エラー読み取り
             string error = await process.StandardError.ReadToEndAsync();
             if (!string.IsNullOrEmpty(error)) Debug.LogError($"Process stderr: {error}");
@@ -207,7 +210,6 @@ public static class ProcessUtil
                 return exited.Task;
             }
         }
-        // 実行後エラー時
         catch (Exception ex)
         {
             timeoutCTS.Cancel();
