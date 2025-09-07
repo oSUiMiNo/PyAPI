@@ -10,28 +10,34 @@ using Debug = UnityEngine.Debug;
 
 public static class CommandUtil
 {
-    //-------------------------------
+    //-----------------------------------------
     // 実行ファイル登録
-    //-------------------------------
+    //-----------------------------------------
     // pyenv-win を想定（bat／cmd どちらでも OK）
     static string PyenvBat => $@"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}\.pyenv\pyenv-win\bin\pyenv.bat";
     static string GitExe => "git";
     static string PythonExe = "python";   // PATH に通っている想定
+    static string PSExe => "powershell.exe";
 
-    //================================================
-    // コマンド実行
-    //================================================
+    ///==============================================<summary>
+    /// ツールのコマンド実行
+    ///</summary>=============================================
     public static async UniTask<string> ExeToolCommand(string command, string workingDir = null)
+    {
+        return await PowerShellAPI.Command(command, workingDir);
+    }
+
+    public static async UniTask<string> ExeToolCommand_Old(string command, string workingDir = null)
     {
         var psi = new ProcessStartInfo
         {
-            FileName = ExeFile(command),
-            Arguments = ToolCommand(command),
+            FileName = command.ExtractTool(),
+            Arguments = command.ExtractCommand(),
             // 実行するディレクトリ
             WorkingDirectory = workingDir ?? Environment.CurrentDirectory,
+            UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            UseShellExecute = false,
             CreateNoWindow = true,
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8
@@ -48,34 +54,36 @@ public static class CommandUtil
         return output.TrimEnd();
     }
 
-    //================================================
-    // コマンドからツールを判断し実行ファイルを返す
-    //================================================
-    static string ExeFile(string command)
+    ///==============================================<summary>
+    /// コマンドからツールを判断し実行ファイルを返す
+    ///</summary>=============================================
+    static string ExtractTool(this string command)
     {
-        //string toolName = command.TrimStr_R(" ", 100);
         // 先頭のトークンを取得
         string toolName = command.Split(' ', 2)[0];
         Debug.Log($"ツール {toolName}");
         // 絶対パス指定ならそのまま返す
-        if (IsAbsolutePath(toolName)) return toolName;
+        if (toolName.IsAbsolutePath()) return toolName;
         return toolName switch
         {
             "pyenv" => PyenvBat,
             "git" => GitExe,
             "python" => PythonExe,
-            _ => throw new Exception($"{toolName} の実行ファイルは登録されていない")
+            _ => PSExe
+            //_ => throw new Exception($"{toolName} の実行ファイルは登録されていない")
         };
     }
 
-    //================================================
-    // ツール名以降のコマンドを切り出し
-    //================================================
-    static string ToolCommand(string command) => command.CropStr_R(" ");
 
-    //================================================
-    // 追加: 絶対パスかどうかを簡易判定
-    //================================================
-    static bool IsAbsolutePath(string s) =>
+    ///==============================================<summary>
+    /// ツール名以降のコマンドを切り出し
+    ///</summary>=============================================
+    static string ExtractCommand(this string command) => command.CropStr_R(" ");
+
+
+    ///==============================================<summary>
+    /// 追加: 絶対パスかどうかを簡易判定
+    ///</summary>=============================================
+    static bool IsAbsolutePath(this string s) =>
         s.Contains(Path.DirectorySeparatorChar) || s.Contains(Path.AltDirectorySeparatorChar);
 }

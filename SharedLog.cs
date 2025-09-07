@@ -7,10 +7,10 @@ using UniRx;
 using Cysharp.Threading.Tasks;
 
 
-//****************************************************
+//****************************************************************
 // 他言語のコードのログを Unity のコンソールに表示する
 // 1インスタンスにつき1ログシェアファイルを扱う
-//****************************************************
+//****************************************************************
 public class SharedLog
 {
     // 監視するファイルのパス
@@ -31,9 +31,10 @@ public class SharedLog
         isActive = true;
     }
 
-    //==================================================
-    // ログシェア用のテキストファイル作成
-    //==================================================
+
+    ///==============================================<summary>
+    /// ログシェア用のテキストファイル作成
+    ///</summary>=============================================
     async UniTask CreateLogFileAsync()
     {
         await UniTask.SwitchToThreadPool();
@@ -43,7 +44,6 @@ public class SharedLog
             try
             {
                 File.Delete(LogPath);
-                //Debug.Log($"ログファイル削除（初期化時）: {LogPath}");
             }
             catch (Exception e)
             {
@@ -58,7 +58,6 @@ public class SharedLog
                 Directory.CreateDirectory(directory);
             }
             File.Create(LogPath).Close();
-            //Debug.Log($"ログファイル作成: {LogPath}");
         }
         catch (Exception e)
         {
@@ -78,11 +77,12 @@ public class SharedLog
         await UniTask.SwitchToMainThread();
     }
 
-    //==================================================
-    // -> ログシェア用のテキストファイルの更新を検知
-    // -> OnLog にログを流す
-    // ※ 外部から任意のタイミングで呼ぶ
-    //==================================================
+
+    ///==============================================<summary>
+    /// -> ログシェア用のテキストファイルの更新を検知
+    /// -> OnLog にログを流す
+    /// ※ 外部から任意のタイミングで呼ぶ
+    ///</summary>=============================================
     public async void ReadLogFile()
     {
         await UniTask.SwitchToThreadPool();
@@ -121,6 +121,7 @@ public class SharedLog
                     string[] logs = sr.ReadToEnd().Split(new[] { "___" }, StringSplitOptions.RemoveEmptyEntries);
                     foreach (string log in logs)
                     {
+                        // Trim => [先頭 / 末尾] の空白削除
                         string trimmedLog = log.Trim();
                         if (!string.IsNullOrEmpty(trimmedLog))
                         {
@@ -137,6 +138,7 @@ public class SharedLog
                         fs.SetLength(0); // ファイル内容をクリア
                         using (StreamWriter sw = new StreamWriter(fs))
                         {
+                            // Trim => [先頭 / 末尾] の空白削除
                             sw.Write(unprocessedLogs.Trim());
                         }
                     }
@@ -146,7 +148,8 @@ public class SharedLog
                     // 全て処理済みならファイルを完全にクリア
                     using (FileStream fs = new FileStream(LogPath, FileMode.Truncate, FileAccess.Write, FileShare.ReadWrite))
                     {
-                        // FileMode.Truncate を使用すると、ファイルを開いた瞬間にその内容が自動的に削除され、ファイルサイズが0にリセットされる。この箇所に具体的な処理を書く必要は無い
+                        // FileMode.Truncate を使用すると、ファイルを開いた瞬間にその内容が自動的に削除され、ファイルサイズが0にリセットされる
+                        // ここに具体的な処理を書く必要は無い
                     }
                 }
             }
@@ -155,11 +158,12 @@ public class SharedLog
         await UniTask.SwitchToMainThread();
     }
 
-    //==================================================
-    // -> Observable 終了
-    // -> ログファイル削除
-    // -> ガベコレ
-    //==================================================
+
+    ///==============================================<summary>
+    /// -> Observable 終了
+    /// -> ログファイル削除
+    /// -> ガベコレ
+    ///</summary>=============================================
     public async void Close()
     {
         await UniTask.SwitchToThreadPool();

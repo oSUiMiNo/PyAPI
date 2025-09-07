@@ -9,25 +9,25 @@ using Debug = UnityEngine.Debug;
 
 public class PyEnvSetter
 {
-    //================================================
-    // 指定フォルダに pyenv local バージョンを設定するフロー
-    //================================================
+    ///==============================================<summary>
+    /// 指定フォルダに pyenv local バージョンを設定するフロー
+    ///</summary>=============================================
     public static async UniTask ExeFlow(string dir, string ver)
     {
         try
         {
             Debug.Log($"Pyenv セットアップ開始...\n{dir}");
-            //-------------------------------
+            //-----------------------------------------
             // 指定フォルダが存在しなければ作成
-            //-------------------------------
+            //-----------------------------------------
             if (!Directory.Exists(dir))
             {
                 Debug.Log($"フォルダが存在しないため作成します: {dir}");
                 Directory.CreateDirectory(dir);
             }
-            //-------------------------------
+            //-----------------------------------------
             // pyenv に指定バージョンがインストールされていなければインストール
-            //-------------------------------
+            //-----------------------------------------
             bool isInstalled = await InstalledPyVer(ver);
             if (!isInstalled)
             {
@@ -43,9 +43,9 @@ public class PyEnvSetter
             {
                 Debug.Log($"Python {ver} は既にインストールされている");
             }
-            //-------------------------------
+            //-----------------------------------------
             // pyenv localを指定バージョンに設定
-            //-------------------------------
+            //-----------------------------------------
             bool setLocalSuccess = await SetLocalVer(dir, ver);
             if (setLocalSuccess)
             {
@@ -63,9 +63,9 @@ public class PyEnvSetter
         Debug.Log($"PyEnv セットアップ完了\n{dir}");
     }
 
-    //================================================
-    // Python 3.12.5がインストールされているか確認
-    //================================================
+    ///==============================================<summary>
+    /// Python 3.12.5がインストールされているか確認
+    ///</summary>=============================================
     static async UniTask<bool> InstalledPyVer(string ver)
     {
         string result = await CommandUtil.ExeToolCommand("pyenv versions");
@@ -73,9 +73,9 @@ public class PyEnvSetter
         return result.Contains(ver);
     }
 
-    //================================================
-    // Python 3.12.5をインストール
-    //================================================
+    ///==============================================<summary>
+    /// Python 3.12.5をインストール
+    ///</summary>=============================================
     static async UniTask<bool> InstallPyVer(string ver)
     {
         Debug.Log($"Python {ver} インストールが開始...");
@@ -84,9 +84,9 @@ public class PyEnvSetter
         return true;
     }
 
-    //================================================
-    // 指定フォルダに pyenv localを設定
-    //================================================
+    ///==============================================<summary>
+    /// 指定フォルダに pyenv localを設定
+    ///</summary>=============================================
     static async UniTask<bool> SetLocalVer(string targDir, string ver)
     {
         string result = await CommandUtil.ExeToolCommand($"pyenv local {ver}", targDir);

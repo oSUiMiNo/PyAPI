@@ -5,17 +5,31 @@ using Cysharp.Threading.Tasks;
 using System.Threading;
 using System.IO;
 using System;
-using System.Collections.Generic;
-using UniRx;
-using System.Text;
-using MyUtil;
+
 
 
 public static class ProcessUtil
 {
-    //==================================================
-    // 引数的な感じで JObject を渡しプロセスを実行
-    //==================================================
+    ///==============================================<summary>
+    /// 実行ファイルが環境PATH上に存在するか確認
+    ///</summary>=============================================
+    public static bool Exe_Is_In_PATH(this string exeName)
+    {
+        string[] paths = Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator);
+        if (paths == null) return false;
+
+        foreach (var path in paths)
+        {
+            string fullPath = $"{path}/{exeName}";
+            if (File.Exists(fullPath)) return true;
+        }
+        return false;
+    }
+
+
+    ///==============================================<summary>
+    /// 引数的な感じで JObject を渡しプロセスを実行
+    ///</summary>=============================================
     public static async void Exe(this System.Diagnostics.Process process, JObject inJO)
     {
         if (process.StartInfo.RedirectStandardInput == false)
@@ -35,29 +49,33 @@ public static class ProcessUtil
         catch { }
     }
 
-   
-    //==================================================
-    // プロセスの非同期実行 (外部からキャンセル可)
-    //==================================================
+
+    ///==============================================<summary>
+    /// プロセスの非同期実行 (外部からキャンセル可)
+    ///</summary>=============================================
     public static async UniTask ExeAsync(this System.Diagnostics.Process process, float timeout = 0, Action fncOnDispose = null, CancellationToken externalCT = default)
     {
         await UniTask.SwitchToThreadPool();
         var timeoutCTS = new CancellationTokenSource();
         var exited = new UniTaskCompletionSource();
 
-        // タイムアウト時間が設定されている場合はその時間でタイムアウト
-        if (timeout != 0)
+        //-----------------------------------------
+        // タイムアウト時間が設定されている場合は登録
+        //-----------------------------------------
+        if (timeout > 0)
+        {
             UniTask.RunOnThreadPool(() => process.Timeout(timeout, timeoutCTS.Token)).Forget();
+        }
 
         //--------------------------------------
         // プロセス終了時処理
         //--------------------------------------
         // Exited (プロセス終了) イベントを有効化
         process.EnableRaisingEvents = true;
-        process.Exited += (sender, args) =>
+        process.Exited += async (sender, args) =>
         {
             // エラー読取り -> ログ出力
-            string error = process.StandardError.ReadToEnd();
+            string error = await process.StandardError.ReadToEndAsync();
             if (!string.IsNullOrEmpty(error)) Debug.LogError($"PowerShell Error: {error}");
             // 実行結果の出力をセット
             exited.TrySetResult();
@@ -74,7 +92,35 @@ public static class ProcessUtil
             fncOnDispose?.Invoke();
         };
 
-        process.Start();
+        //-----------------------------------------
+        // 実行 -> 失敗した場合未完了タスクを残さない
+        //-----------------------------------------
+        try
+        {
+            // Start 失敗を確実に表面化
+            if (!process.Start())
+            {
+                timeoutCTS.Cancel();
+                try 
+                {
+                    process.Dispose();
+                }
+                catch { }
+                throw new InvalidOperationException("Failed to start process.");
+            }
+        }
+        // 実行後エラー時
+        catch (Exception)
+        {
+            timeoutCTS.Cancel();
+            try
+            {
+                process.Dispose();
+            }
+            catch { }
+            // 終了し await に進まない
+            throw;
+        }
 
         //--------------------------------------
         // 外部からのキャンセルを設定
@@ -99,9 +145,88 @@ public static class ProcessUtil
         await UniTask.SwitchToMainThread();
     }
 
-    //==================================================
-    // タイムアウト
-    //==================================================
+
+    ///==============================================<summary>
+    /// プロセスの非同期実行 (簡易版)
+    /// ReadToEnd() のバッファが小さいので
+    /// [ 大出力を受け取ったり高速継続実行する処理 ] では NG
+    ///</summary>=============================================
+    public static UniTask<string> ExeAsync_Light(this System.Diagnostics.Process process, float timeout = 0, Action fncOnDispose = null)
+    {
+        string output = "";
+        var timeoutCTS = new CancellationTokenSource();
+        var exited = new UniTaskCompletionSource<string>();
+
+        //-----------------------------------------
+        // タイムアウト時間が設定されている場合は登録
+        //-----------------------------------------
+        if (timeout > 0)
+        {
+            UniTask.RunOnThreadPool(() => process.Timeout(timeout, timeoutCTS.Token)).Forget();
+        }
+
+        //--------------------------------------
+        // プロセス終了時処理登録
+        //--------------------------------------
+        // Exited イベントを有効化
+        process.EnableRaisingEvents = true;
+        process.Exited += async (sender, args) =>
+        {
+            // エラー読み取り
+            string error = await process.StandardError.ReadToEndAsync();
+            if (!string.IsNullOrEmpty(error)) Debug.LogError($"Process stderr: {error}");
+            output = await process.StandardOutput.ReadToEndAsync();
+            process.PerfectKill();
+        };
+
+        //--------------------------------------
+        // プロセス抹消時処理登録
+        //--------------------------------------
+        process.Disposed += (sender, args) =>
+        {
+            exited.TrySetResult(output);
+            timeoutCTS.Cancel();
+            fncOnDispose?.Invoke();
+        };
+
+        //-----------------------------------------
+        // 実行 -> 失敗した場合未完了タスクを残さない
+        //-----------------------------------------
+        try
+        {
+            // Start 失敗を確実に表面化
+            if (!process.Start())
+            {
+                timeoutCTS.Cancel();
+                exited.TrySetException(new InvalidOperationException("Failed to start process."));
+                try
+                {
+                    process.Dispose();
+                }
+                catch { }
+                return exited.Task;
+            }
+        }
+        // 実行後エラー時
+        catch (Exception ex)
+        {
+            timeoutCTS.Cancel();
+            exited.TrySetException(ex);
+            try
+            {
+                process.Dispose();
+            }
+            catch { }
+            return exited.Task;
+        }
+
+        return exited.Task;
+    }
+
+
+    ///==============================================<summary>
+    /// タイムアウト
+    ///</summary>=============================================
     public static async void Timeout(this System.Diagnostics.Process process, float timeout, CancellationToken CT)
     {
         try
@@ -118,12 +243,14 @@ public static class ProcessUtil
         }
     }
 
-    //==================================================
-    // プロセス抹消 {
-    //     -> Kill() でプロセスの動作即死
-    //     -> Dipose() でプロセスと周辺資源を管理から解放
-    // }
-    //==================================================
+
+    ///==============================================<summary>
+    /// プロセス抹消 {
+    ///     -> Kill() でプロセスの動作即死
+    ///     -> Dipose() でプロセスと周辺資源を管理から解放
+    /// }
+    /// 
+    ///</summary>=============================================
     public static void PerfectKill(this System.Diagnostics.Process process)
     {
         try
@@ -145,64 +272,4 @@ public static class ProcessUtil
             process.Dispose();           
         }
     }
-
-
-    // レガシー
-
-    ////==================================================
-    //// コマンド実行
-    ////==================================================
-    //public static async void Command(this System.Diagnostics.Process process, string command)
-    //{
-    //    if (process.StartInfo.RedirectStandardInput == false)
-    //    {
-    //        Debug.LogError("StartInfo.RedirectStandardInput を True にして");
-    //        return;
-    //    }
-    //    try
-    //    {
-    //        await UniTask.SwitchToThreadPool();
-    //        StreamWriter inputWriter = process.StandardInput;
-    //        inputWriter.WriteLine(command);
-    //        inputWriter.Flush();
-    //        await UniTask.SwitchToMainThread();
-    //    }
-    //    catch { }
-    //}
-
-    ////==================================================
-    //// プロセスの非同期実行
-    ////==================================================
-    //public static UniTask<string> RunAsync(this System.Diagnostics.Process process, float timeout = 0, Action fncOnDispose = null)
-    //{
-    //    var cts = new CancellationTokenSource();
-    //    var exited = new UniTaskCompletionSource<string>();
-    //    string output = "";
-
-    //    // タイムアウト時間が設定されている場合はその時間でタイムアウト
-    //    if (timeout != 0)
-    //        UniTask.RunOnThreadPool(() => process.Timeout(timeout, cts.Token)).Forget();
-
-    //    // Exited イベントを有効化
-    //    process.EnableRaisingEvents = true;
-    //    process.Exited += (sender, args) =>
-    //    {
-    //        // エラー読取り
-    //        string error = process.StandardError.ReadToEnd();
-    //        if (!string.IsNullOrEmpty(error)) Debug.LogError($"PowerShell Error: {error}");
-    //        output = process.StandardOutput.ReadToEnd();
-    //        process.PerfectKill();
-    //    };
-
-    //    process.Disposed += (sender, args) =>
-    //    {
-    //        exited.TrySetResult(output);
-    //        cts.Cancel();
-    //        fncOnDispose?.Invoke();
-    //    };
-
-    //    process.Start();
-
-    //    return exited.Task;
-    //}
 }
