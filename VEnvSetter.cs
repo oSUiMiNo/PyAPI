@@ -80,6 +80,9 @@ public static class VEnvSetter
         //-----------------------------------------
         // venv の現状を取得
         //-----------------------------------------
+        Debug.Log($"pyenv に実行ファイルができるまで待機");
+        await UniTask.WaitUntil(() => File.Exists("C:/Users/user/.pyenv/pyenv-win/versions/3.12.5/python.exe"));
+        Debug.Log($"pyenv に実行ファイルができた");
         string freeze = await PowerShellAPI.Command($"{venvPy} -m pip freeze", dir);
         var installed = freeze.Split('\n')
                               .Select(l => l.Trim())
