@@ -4,10 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using UnityEngine;
-using static Codice.Client.Commands.WkTree.WorkspaceTreeNode;
-using static Codice.CM.WorkspaceServer.WorkspaceTreeDataStore;
 using Debug = UnityEngine.Debug;
-
 
 
 
@@ -21,7 +18,7 @@ public class PyEnvSetter
         try
         {
             Debug.Log($"Pyenv セットアップ開始...\n{dir}");
-            
+
             //-----------------------------------------
             // pyenv のインストールが未だならインストール
             //-----------------------------------------
@@ -29,9 +26,9 @@ public class PyEnvSetter
             {
                 await IsInstalled_PyEnv();
             }
-            catch
+            catch (Exception e)
             {
-                Debug.Log($"pyenv がインストールされていない");
+                Debug.Log($"pyenv がインストールされていない\n {e}");
                 await InstallPyEnv();
             }
             //-----------------------------------------
@@ -39,7 +36,7 @@ public class PyEnvSetter
             //-----------------------------------------
             if (!Directory.Exists(dir))
             {
-                Debug.Log($"フォルダが存在しないため作成: {dir}");
+                Debug.Log($"フォルダが存在しないため作成：{dir}");
                 Directory.CreateDirectory(dir);
             }
             //-----------------------------------------
@@ -94,24 +91,30 @@ public class PyEnvSetter
     static async UniTask InstallPyEnv()
     {
         Debug.Log($"pyenv インストール開始...");
-        string users = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
-        //string psCmd =
-        //    "Invoke-WebRequest -UseBasicParsing -Uri \"https://raw.githubusercontent.com/pyenv-win/pyenv-win/master/pyenv-win/install-pyenv-win.ps1\" " +
-        //    "-OutFile \"./install-pyenv-win.ps1\"; & \"./install-pyenv-win.ps1\"";
+        // C:/Users/[ユーザ名] フォルダ
+        string usersDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
+        // pyenv インストールコマンド
+        string result = await PowerShellAPI.Command(
+            // 外部スクリプトの実行が許可
+            "Set-ExecutionPolicy RemoteSigned -Scope Process" +
+            // 質問が来たら承認
+            " -Force;" +
+            // インストール用 .bat を DL
+            "Invoke-WebRequest -UseBasicParsing -Uri \"https://raw.githubusercontent.com/pyenv-win/pyenv-win/master/pyenv-win/install-pyenv-win.ps1\" " +
+            // インストール用 .bat からインストール
+            "-OutFile \"./install-pyenv-win.ps1\"; & \"./install-pyenv-win.ps1\"" +
+            // 質問が来たら承認
+            " -Force",
+            // C:/Users/[ユーザ名] フォルダで実行 (どこで実行しても C:/Users/[ユーザ名] にインストールされる)
+            usersDir
+        );
+        
         // インストール直後に現在プロセスの PATH を更新
         RefreshPathForCurrentProcess();
 
-        string result = await PowerShellAPI.Command(
-            // pyenv インストールコマンド
-            "Invoke-WebRequest -UseBasicParsing -Uri \"https://raw.githubusercontent.com/pyenv-win/pyenv-win/master/pyenv-win/install-pyenv-win.ps1\" " +
-            "-OutFile \"./install-pyenv-win.ps1\"; & \"./install-pyenv-win.ps1\"",
-            // C:/Users/[ユーザ名] フォルダで実行 (どこで実行しても C:/Users/[ユーザ名] にインストールされる)
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-        );
-        Debug.Log($"{result}");
-        Debug.Log($"pyenv インストール完了");
+        Debug.Log($"pyenv インストール完了\n{result}");
     }
 
     static void RefreshPathForCurrentProcess()
