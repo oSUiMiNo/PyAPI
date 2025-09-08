@@ -188,10 +188,13 @@ public static class ProcessUtil
             {
                 // イベント発火タイミングのズレによるエラー防止で一旦確実に終了を待つ
                 process.WaitForExit();
+                Debug.Log($"プロセス0");
                 // エラー読み取り
                 string stdErr = await process.StandardError.ReadToEndAsync();
                 // 結果読み取り
                 string stdOut = await process.StandardOutput.ReadToEndAsync();
+                Debug.Log($"プロセス1");
+
                 int code = process.ExitCode;
 
                 // 成功/失敗をここで完了させる
