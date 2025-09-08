@@ -222,7 +222,7 @@ public static class ProcessUtil
 
 
 
-    public static async Task<UniTask<string>> ExeAsync_Light(this System.Diagnostics.Process process, float timeout = 0, Action fncOnDispose = null)
+    public static async UniTask<string> ExeAsync_Light(this System.Diagnostics.Process process, float timeout = 0, Action fncOnDispose = null)
     {
         string output = "";
         var timeoutCTS = new CancellationTokenSource();
@@ -302,7 +302,7 @@ public static class ProcessUtil
                     process.PerfectKill();
                 }
                 catch { }
-                return exited.Task;
+                return await exited.Task;
             }
         }
         catch (Exception ex)
@@ -314,7 +314,7 @@ public static class ProcessUtil
                 process.PerfectKill();
             }
             catch { }
-            return exited.Task;
+            return await exited.Task;
         }
 
         //-----------------------------------------
@@ -359,8 +359,7 @@ public static class ProcessUtil
             catch { }
         }
 
-
-        return exited.Task;
+        return await exited.Task;
     }
 
 
