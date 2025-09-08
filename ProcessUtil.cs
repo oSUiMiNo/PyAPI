@@ -153,71 +153,6 @@ public static class ProcessUtil
     /// ReadToEnd() のバッファが小さいので
     /// [ 大出力を受け取ったり高速継続実行する処理 ] では NG
     ///</summary>=============================================
-    
-    //public static async UniTask<string> ExeAsync_Robust(this System.Diagnostics.Process process, int timeoutMs = 0)
-    //{
-    //    var tcs = new UniTaskCompletionSource<string>();
-
-    //    process.EnableRaisingEvents = false; // 使わない
-    //    process.StartInfo.RedirectStandardInput  = false;
-    //    process.StartInfo.RedirectStandardOutput = true;
-    //    process.StartInfo.RedirectStandardError  = true;
-    //    process.StartInfo.UseShellExecute        = false;
-
-    //    var sbOut = new System.Text.StringBuilder();
-    //    var sbErr = new System.Text.StringBuilder();
-    //    // 行単位で詰まり回避
-    //    process.OutputDataReceived += (_, e) => { if (e.Data != null) sbOut.AppendLine(e.Data); };
-    //    process.ErrorDataReceived  += (_, e) => { if (e.Data != null) sbErr.AppendLine(e.Data); };
-
-    //    if (!process.Start())
-    //        throw new Exception("プロセス起動に失敗");
-
-    //    process.BeginOutputReadLine();
-    //    process.BeginErrorReadLine();
-
-    //    // 終了待ち（イベントを使わない）
-    //    var waitExit = UniTask.RunOnThreadPool(() =>
-    //    {
-    //        process.WaitForExit();           // 本体終了待ち
-    //        process.WaitForExit(200);        // I/O ドレインの猶予
-    //        return true;
-    //    });
-
-    //    if (timeoutMs > 0)
-    //    {
-    //        var finished = await UniTask.WhenAny(waitExit, UniTask.Delay(timeoutMs));
-    //        if (finished == 1) // タイムアウト
-    //        {
-    //            try { process.Kill(true); } catch {}
-    //            try { process.WaitForExit(); } catch {}
-    //            var err = sbErr.ToString();
-    //            throw new TimeoutException("プロセスがタイムアウトしました。\n" + err);
-    //        }
-    //    }
-    //    else
-    //    {
-    //        await waitExit;
-    //    }
-
-    //    var code = process.ExitCode;
-    //    var stdout = sbOut.ToString();
-    //    var stderr = sbErr.ToString();
-
-    //    try { process.Close(); } catch {}
-    //    try { process.Dispose(); } catch {}
-
-    //    if (code != 0)
-    //        throw new Exception($"ExitCode={code}\n{stderr}");
-
-    //    // PowerShell が警告を STDERR に出す場合がある。必要なら結合して返す:
-    //    if (!string.IsNullOrEmpty(stderr))
-    //        stdout += "\n[STDERR]\n" + stderr;
-
-    //    return stdout;
-    //}
-
-
     public static async UniTask<string> ExeAsync_Light(this System.Diagnostics.Process process, float timeout = 0, Action fncOnDispose = null)
     {
         string output = "";
@@ -272,12 +207,15 @@ public static class ProcessUtil
 
         if (code != 0)
         {
-            throw new Exception($"ExitCode={code}\n{stderr}");
+            throw new Exception($"{stderr}");
         }
 
         // PowerShell が警告を STDERR に出す場合がある。必要なら結合して返す:
         if (!string.IsNullOrEmpty(stderr))
-            stdout += "\n[STDERR]\n" + stderr;
+        {
+            throw new Exception($"{stderr}");
+        }
+        //stdout += "\n[STDERR]\n" + stderr;
 
         return stdout;
 

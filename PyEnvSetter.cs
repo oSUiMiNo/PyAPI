@@ -81,7 +81,7 @@ public class PyEnvSetter
     {
         Debug.Log($"pyenv バージョン確認開始...");
         string version = await PowerShellAPI.Command("pyenv --version");
-        Debug.Log($"pyenv バージョン確認完了　Ver：{version}");
+        Debug.Log($"pyenv バージョン確認完了\n{version}");
     }
 
 
@@ -185,9 +185,9 @@ exit 0
     ///</summary>=============================================
     static async UniTask SetLocalVer(string dir, string ver)
     {
-        Debug.Log($"{dir} の pyenv local を {ver} に設定開始...");
+        Debug.Log($"pyenv local を {ver} に設定開始...\nディレクトリ：{dir}");
         string result = await PowerShellAPI.Command($"pyenv local {ver}", dir);
-        Debug.Log($"{dir} の pyenv local を {ver} に設定完了");
+        Debug.Log($"pyenv local を {ver} に設定完了");
 
         //-----------------------------------------
         // .python-versionファイルが作成されたか確認
