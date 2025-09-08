@@ -23,15 +23,16 @@ public class PyEnvSetter
             //-----------------------------------------
             // pyenv のインストールが未だならインストール
             //-----------------------------------------
-            await IsInstalled_PyEnv();
-            //try
-            //{
-            //    await IsInstalled_PyEnv();
-            //}
-            //catch
-            //{
-            //    //await InstallPyEnv();
-            //}
+            //await IsInstalled_PyEnv();
+            try
+            {
+                await IsInstalled_PyEnv();
+            }
+            catch
+            {
+                throw;
+                //await InstallPyEnv();
+            }
 
             //if (!await IsInstalled_PyEnv())
             //{

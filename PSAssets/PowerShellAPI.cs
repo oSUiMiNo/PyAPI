@@ -25,27 +25,31 @@ public static class PowerShellAPI
     ///</summary>=============================================
     public static async UniTask<string> Command(string command, string workingDir = null, float timeout = 0)
     {
-        // 出力をUTF-8に固定してからエンコード（PowerShell 5対策）
-        command = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " + command;
-        // 安全：UTF-16LE -> Base64 で -EncodedCommand
-        command = Convert.ToBase64String(Encoding.Unicode.GetBytes(command));
-
-        System.Diagnostics.Process process = new()
+        try
         {
-            StartInfo = new(PsExeFile)
+            // 出力をUTF-8に固定してからエンコード（PowerShell 5対策）
+            command = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " + command;
+            // 安全：UTF-16LE -> Base64 で -EncodedCommand
+            command = Convert.ToBase64String(Encoding.Unicode.GetBytes(command));
+
+            System.Diagnostics.Process process = new()
             {
-                Arguments = $"-NoProfile -ExecutionPolicy Bypass" +
-                            $" -EncodedCommand {command}",
-                WorkingDirectory = workingDir ?? Environment.CurrentDirectory,
-                UseShellExecute = false, // シェルを使用しない
-                RedirectStandardOutput = true, // 標準出力をリダイレクト
-                RedirectStandardError = true, // 標準エラーをリダイレクト
-                CreateNoWindow = true, // PowerShellウィンドウを表示しない
-                StandardOutputEncoding = Encoding.UTF8, // 出力の文字化け防止
-                StandardErrorEncoding = Encoding.UTF8, // エラーメッセの文字化け防止
-            }
-        };
-        return await process.ExeAsync_Light(timeout);
+                StartInfo = new(PsExeFile)
+                {
+                    Arguments = $"-NoProfile -ExecutionPolicy Bypass" +
+                                $" -EncodedCommand {command}",
+                    WorkingDirectory = workingDir ?? Environment.CurrentDirectory,
+                    UseShellExecute = false, // シェルを使用しない
+                    RedirectStandardOutput = true, // 標準出力をリダイレクト
+                    RedirectStandardError = true, // 標準エラーをリダイレクト
+                    CreateNoWindow = true, // PowerShellウィンドウを表示しない
+                    StandardOutputEncoding = Encoding.UTF8, // 出力の文字化け防止
+                    StandardErrorEncoding = Encoding.UTF8, // エラーメッセの文字化け防止
+                }
+            };
+            return await process.ExeAsync_Light(timeout);
+        }
+        catch { throw; }
     }
 
 
