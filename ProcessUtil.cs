@@ -7,7 +7,6 @@ using System.IO;
 using System;
 
 
-
 public static class ProcessUtil
 {
     ///==============================================<summary>
@@ -77,8 +76,8 @@ public static class ProcessUtil
             // イベント発火タイミングのズレによるエラー防止で一旦確実に終了を待つ
             process.WaitForExit();
             // エラー読取り -> ログ出力
-            string error = await process.StandardError.ReadToEndAsync();
-            if (!string.IsNullOrEmpty(error)) Debug.LogError($"PowerShell Error: {error}");
+            string e = await process.StandardError.ReadToEndAsync();
+            if (!string.IsNullOrEmpty(e)) throw new Exception($"プロセスエラー：{e}");
             // 実行結果の出力をセット
             exited.TrySetResult();
             // プロセス抹消
@@ -108,7 +107,7 @@ public static class ProcessUtil
                     process.Dispose();
                 }
                 catch { }
-                throw new InvalidOperationException("Failed to start process.");
+                throw new Exception("プロセス実行失敗");
             }
         }
         catch (Exception)
@@ -176,8 +175,8 @@ public static class ProcessUtil
             // イベント発火タイミングのズレによるエラー防止で一旦確実に終了を待つ
             process.WaitForExit();
             // エラー読み取り
-            string error = await process.StandardError.ReadToEndAsync();
-            if (!string.IsNullOrEmpty(error)) Debug.LogError($"Process stderr: {error}");
+            string e = await process.StandardError.ReadToEndAsync();
+            if (!string.IsNullOrEmpty(e)) throw new Exception($"プロセスエラー：{e}");
             output = await process.StandardOutput.ReadToEndAsync();
             process.PerfectKill();
         };
@@ -201,24 +200,24 @@ public static class ProcessUtil
             if (!process.Start())
             {
                 timeoutCTS.Cancel();
-                exited.TrySetException(new InvalidOperationException("Failed to start process."));
                 try
                 {
                     process.Dispose();
                 }
                 catch { }
+                exited.TrySetException(new Exception("プロセス実行失敗"));
                 return exited.Task;
             }
         }
         catch (Exception ex)
         {
             timeoutCTS.Cancel();
-            exited.TrySetException(ex);
             try
             {
                 process.Dispose();
             }
             catch { }
+            exited.TrySetException(ex);
             return exited.Task;
         }
 
@@ -264,7 +263,7 @@ public static class ProcessUtil
                 process.WaitForExit();    // 終了確認（タイムアウト付けてもいい）
             }
         }
-        catch (InvalidOperationException)
+        catch (Exception)
         {
             // すでに終了していたら例外無視でOK
         }
