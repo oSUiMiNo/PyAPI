@@ -29,6 +29,21 @@ public static class VEnvSetter
             await PowerShellAPI.Command("pyenv exec python -m venv .venv", dir);
         }
         //-----------------------------------------
+        // pyenv.cfg ファイルの home パスを自分のPCに置き換える
+        //-----------------------------------------
+        string cfgFile = $"{venvDir}/pyvenv.cfg";
+        // pyenv.cfg ファイルが無ければ .venv 削除して再設定
+        if (!File.Exists(cfgFile))
+        {
+            Debug.Log($"pyenv.cfg ファイルが無いので .venv リセット");
+            Directory.Delete(venvDir);
+            await PowerShellAPI.Command("pyenv exec python -m venv .venv", dir);
+        }
+        else
+        {
+            ReplaceCfg(cfgFile);
+        }
+        //-----------------------------------------
         // requirements.txt が無ければスキップ
         //-----------------------------------------
         string libList = $"{dir}/requirements.txt";
@@ -61,6 +76,28 @@ public static class VEnvSetter
 
 
     ///==============================================<summary>
+    /// cfg ファイルの home の ユーザフォルダパス部分を各々の環境に置き換え
+    ///</summary>=============================================
+    static void ReplaceCfg(string cfgPath)
+    {
+        Debug.Log($"cfg ファイルのホームパス置き換え開始...");
+        string usersDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        // すべての行を読み込む
+        string[] lines = File.ReadAllLines(cfgPath);
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].StartsWith("home ="))
+            {
+                lines[i] = @$"home = {usersDir}\.pyenv\pyenv-win\versions\3.12.5";
+            }
+        }
+        // 上書き保存
+        File.WriteAllLines(cfgPath, lines);
+        Debug.Log($"cfg ファイルのホームパス置き換え完了");
+    }
+
+
+    ///==============================================<summary>
     // requirements.txt と venv 内 pip freeze を比較
     ///</summary>=============================================
     static async UniTask<bool> IsAlreadySatisfiedAsync(string venvPy, string reqPath, string dir)
@@ -80,11 +117,9 @@ public static class VEnvSetter
         //-----------------------------------------
         // venv の現状を取得
         //-----------------------------------------
-        Debug.Log($"pyenv に実行ファイルができるまで待機");
         // C:/Users/[ユーザ名] フォルダ
         string usersDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         await UniTask.WaitUntil(() => File.Exists($"{usersDir}/.pyenv/pyenv-win/versions/3.12.5/python.exe"));
-        Debug.Log($"pyenv に実行ファイルができた");
         string freeze = await PowerShellAPI.Command($"{venvPy} -m pip freeze", dir);
         var installed = freeze.Split('\n')
                               .Select(l => l.Trim())
