@@ -132,7 +132,7 @@ public class PyEnvSetter
 
     static void RefreshPathForCurrentProcess()
     {
-        Debug.Log($"PATH 更新開始");
+        Debug.Log($"PATH 更新開始...");
         var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         var pyenvRoot = Path.Combine(userProfile, ".pyenv", "pyenv-win");
         var bin = Path.Combine(pyenvRoot, "bin");
