@@ -31,7 +31,7 @@ public class PyEnvSetter
             catch(Exception e)
             {
                 Debug.Log($"1 {e}");
-                throw;
+                throw e;
                 //await InstallPyEnv();
             }
 
@@ -110,7 +110,7 @@ public class PyEnvSetter
         catch (Exception e)
         {
             Debug.Log($"2 {e}");
-            throw;
+            throw e;
         }
     }
 

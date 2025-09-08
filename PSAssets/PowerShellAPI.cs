@@ -48,12 +48,13 @@ public static class PowerShellAPI
                     StandardErrorEncoding = Encoding.UTF8, // エラーメッセの文字化け防止
                 }
             };
-            return await process.ExeAsync_Light(timeout);
+            string result = await process.ExeAsync_Light(timeout);
+            return result;
         }
         catch(Exception e)
         {
             Debug.Log($"0 {e}");
-            throw;
+            throw e;
         }
     }
 
