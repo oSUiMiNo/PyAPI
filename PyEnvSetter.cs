@@ -85,13 +85,14 @@ public class PyEnvSetter
         try
         {
             Debug.Log($"pyenv インストール状況確認開始...");
-            throw new Exception("エクセプション");
+            throw new InvalidOperationException("エクセプション");
             string version = await CommandUtil.ExeToolCommand("pyenv --version");
             Debug.Log($"pyenv インストール状況確認完了　バージョン：{version}");
             return true;
         }
-        catch
+        catch(InvalidOperationException e)
         {
+            Debug.Log($"エクセプション {e}");
             Debug.Log("pyenv 未インストール");
             return false;
         }
