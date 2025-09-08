@@ -33,6 +33,7 @@ public static class PowerShellAPI
 
         System.Diagnostics.Process process = new()
         {
+            EnableRaisingEvents = false,
             StartInfo = new(PsExeFile)
             {
                 Arguments = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass" +
@@ -41,6 +42,7 @@ public static class PowerShellAPI
                 UseShellExecute = false, // シェルを使用しない
                 RedirectStandardOutput = true, // 標準出力をリダイレクト
                 RedirectStandardError = true, // 標準エラーをリダイレクト
+                RedirectStandardInput = false,
                 CreateNoWindow = true, // PowerShellウィンドウを表示しない
                 StandardOutputEncoding = Encoding.UTF8, // 出力の文字化け防止
                 StandardErrorEncoding = Encoding.UTF8, // エラーメッセの文字化け防止
