@@ -1,9 +1,7 @@
 using Cysharp.Threading.Tasks;
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;   // 忘れてない？
-using System.Runtime.ConstrainedExecution;
+using System.Linq;
 using System.Text;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -84,12 +82,11 @@ public class PyEnvSetter
     ///</summary>=============================================
     static async UniTask<bool> IsInstalled_PyEnv()
     {
-        Debug.Log("pyenv インストール状況確認開始...");
         try
         {
+            Debug.Log($"pyenv インストール状況確認開始...");
             string version = await CommandUtil.ExeToolCommand("pyenv --version");
-            Debug.Log("pyenv インストール済" + version);
-            Debug.Log("pyenv インストール状況確認完了");
+            Debug.Log($"pyenv インストール状況確認完了　バージョン：{version}");
             return true;
         }
         catch

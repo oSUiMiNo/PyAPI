@@ -176,7 +176,7 @@ public static class ProcessUtil
             process.WaitForExit();
             // エラー読み取り
             string e = await process.StandardError.ReadToEndAsync();
-            if (!string.IsNullOrEmpty(e)) throw new Exception($"プロセスエラー：{e}");
+            if (!string.IsNullOrEmpty(e)) throw new InvalidOperationException($"プロセスエラー：{e}");
             output = await process.StandardOutput.ReadToEndAsync();
             process.PerfectKill();
         };
