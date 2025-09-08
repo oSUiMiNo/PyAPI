@@ -209,11 +209,11 @@ public static class ProcessUtil
         {
             throw new Exception($"ExitCode={code}\n{stderr}");
         }
-
-        // 警告は返り値に付ける or ログに出すだけ
+        // 警告は返り値に付ける
+        else
         if (!string.IsNullOrEmpty(stderr))
         {
-            stdout += "\n[STDERR]\n" + stderr; // あるいは Debug.LogWarning(stderr);
+            stdout += "\n[警告]\n" + stderr;
         }
 
         return stdout;
