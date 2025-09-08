@@ -27,7 +27,7 @@ public static class PowerShellAPI
     {
         // 出力をUTF-8に固定してからエンコード（PowerShell 5対策）
         command = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " + command;
-        // 安全：UTF-16LE → Base64 で -EncodedCommand
+        // 安全：UTF-16LE -> Base64 で -EncodedCommand
         command = Convert.ToBase64String(Encoding.Unicode.GetBytes(command));
 
         System.Diagnostics.Process process = new()

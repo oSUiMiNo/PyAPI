@@ -2,11 +2,11 @@ using Cysharp.Threading.Tasks;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;   // 忘れてない？
 using System.Runtime.ConstrainedExecution;
+using System.Text;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
-using System.Text;
-using System.Linq;   // 忘れてない？
 
 
 
@@ -47,8 +47,9 @@ public class PyEnvSetter
                 bool installSuccess = await InstallPyVer(ver);
                 if (!installSuccess)
                 {
-                    Debug.LogError($"Python {ver} インストール失敗");
-                    return;
+                    throw new Exception($"Python {ver} インストール失敗");
+                    //Debug.LogError($"Python {ver} インストール失敗");
+                    //return;
                 }
             }
             else
@@ -65,12 +66,14 @@ public class PyEnvSetter
             }
             else
             {
-                Debug.LogError("pyenv localの設定失敗");
+                throw new Exception($"pyenv localの設定失敗");
+                //Debug.LogError("pyenv localの設定失敗");
             }
         }
         catch (Exception e)
         {
-            Debug.LogError($"エラー: {e.Message}");
+            throw new Exception($"エラー: {e.Message}");
+            //Debug.LogError($"エラー: {e.Message}");
         }
         Debug.Log($"PyEnv セットアップ完了\n{dir}");
     }
@@ -81,10 +84,12 @@ public class PyEnvSetter
     ///</summary>=============================================
     static async UniTask<bool> IsInstalled_PyEnv()
     {
+        Debug.Log("pyenv インストール状況確認開始...");
         try
         {
             string version = await CommandUtil.ExeToolCommand("pyenv --version");
             Debug.Log("pyenv インストール済" + version);
+            Debug.Log("pyenv インストール状況確認完了");
             return true;
         }
         catch
@@ -126,7 +131,7 @@ public class PyEnvSetter
 
         // セミコロンで分割してリスト化（大文字小文字区別しない）
         var paths = current.Split(';', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(p => p.Trim())   // ← ここで衝突してる
+                    .Select(p => p.Trim())
                     .ToList();
 
         // 既に入っていなければ先頭に追加
@@ -147,8 +152,9 @@ public class PyEnvSetter
     ///</summary>=============================================
     static async UniTask<bool> IsInstalled_PyVer(string ver)
     {
+        Debug.Log($"pyenv インストール済 Python バージョン確認開始...");
         string result = await CommandUtil.ExeToolCommand("pyenv versions");
-        Debug.Log($"pyenv バージョン一覧\n {result}");
+        Debug.Log($"pyenv インストール済 Python バージョン確認完了\n一覧\n {result}");
         return result.Contains(ver);
     }
 
