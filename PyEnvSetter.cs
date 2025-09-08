@@ -23,7 +23,16 @@ public class PyEnvSetter
             //-----------------------------------------
             // pyenv のインストールが未だならインストール
             //-----------------------------------------
-            await IsInstalled_PyEnv();
+            try
+            {
+                await IsInstalled_PyEnv();
+            }
+            catch
+            {
+                Debug.Log($"pyenv 未インストール");
+                await InstallPyEnv();
+            }
+
             //try
             //{
             //    await IsInstalled_PyEnv();
@@ -102,22 +111,14 @@ public class PyEnvSetter
         Debug.Log($"pyenv インストール状況確認開始...");
         string version = await PowerShellAPI.Command("pyenv --version");
         Debug.Log($"pyenv インストール状況確認完了　バージョン：{version}");
-        Debug.Log($"pyenv 未インストール");
-        
-        //string version = await CommandUtil.ExeToolCommand("pyenv --version");
-        //try
-        //{
-        //    Debug.Log($"pyenv インストール状況確認開始...");
-        //    string version = await CommandUtil.ExeToolCommand("pyenv --version");
-        //    Debug.Log($"pyenv インストール状況確認完了　バージョン：{version}");
-        //    Debug.Log($"pyenv 未インストール");
-        //}
-        //catch (Exception e)
-        //{
-        //    throw;
-        //}
     }
 
+
+    static async UniTask AAA()
+    {
+        await Delay.Second(1);
+        throw new Exception($"AAA");
+    }
 
     ///==============================================<summary>
     /// Python 3.12.5をインストール
@@ -134,8 +135,9 @@ public class PyEnvSetter
         // インストール直後に現在プロセスの PATH を更新
         RefreshPathForCurrentProcess();
 
-        string result = await PowerShellAPI.Command(psCmd, workingDir: userProfile);
-        Debug.Log($"pyenv インストール完了");
+        await AAA();
+        //string result = await PowerShellAPI.Command(psCmd, workingDir: userProfile);
+        //Debug.Log($"pyenv インストール完了");
         return true;
     }
 
