@@ -5,7 +5,7 @@ using Cysharp.Threading.Tasks;
 using System.Threading;
 using System.IO;
 using System;
-using System.Threading.Tasks;
+using System.Text;
 
 
 public static class ProcessUtil
@@ -153,6 +153,72 @@ public static class ProcessUtil
     /// ReadToEnd() のバッファが小さいので
     /// [ 大出力を受け取ったり高速継続実行する処理 ] では NG
     ///</summary>=============================================
+    public static async UniTask<string> ExeAsync_Light(this System.Diagnostics.Process process, float timeout = 0, Action fncOnDispose = null)
+    {
+        var timeoutCTS = new CancellationTokenSource();
+        var exited = new UniTaskCompletionSource<string>();
+
+        //-----------------------------------------
+        // タイムアウト時間が設定されている場合は登録
+        //-----------------------------------------
+        if (timeout > 0)
+        {
+            UniTask.RunOnThreadPool(() => process.Timeout(timeout, timeoutCTS.Token)).Forget();
+        }
+
+        StringBuilder sbOut = new ();
+        StringBuilder sbErr = new ();
+
+        //-----------------------------------------
+        // 行単位で詰まり回避
+        //-----------------------------------------
+        process.OutputDataReceived += (_, e) => { if (e.Data != null) sbOut.AppendLine(e.Data); };
+        process.ErrorDataReceived += (_, e) => { if (e.Data != null) sbErr.AppendLine(e.Data); };
+
+        if (!process.Start())
+        {
+            throw new Exception("プロセス起動に失敗");
+        }
+
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+
+        //-----------------------------------------
+        // 終了待ち（イベントを使わない）
+        //-----------------------------------------
+        UniTask waitExit = UniTask.RunOnThreadPool(() =>
+        {
+            process.WaitForExit();           // 本体終了待ち
+            process.WaitForExit(200);        // I/O ドレインの猶予
+        });
+        await waitExit;
+
+        int code = process.ExitCode;
+        string stdout = sbOut.ToString();
+        string stderr = sbErr.ToString();
+
+        try
+        {
+            process.PerfectKill();
+        }
+        catch { }
+
+        if (code != 0)
+        {
+            throw new Exception($"ExitCode={code}\n{stderr}");
+        }
+        // 警告は返り値に付ける
+        else
+        if (!string.IsNullOrEmpty(stderr))
+        {
+            stdout += $"ExitCode={code} [警告]\n{stderr}";
+        }
+
+        return stdout;
+    }
+
+
+
     //public static async UniTask<string> ExeAsync_Light(this System.Diagnostics.Process process, float timeout = 0, Action fncOnDispose = null)
     //{
     //    string output = "";
@@ -167,20 +233,86 @@ public static class ProcessUtil
     //        UniTask.RunOnThreadPool(() => process.Timeout(timeout, timeoutCTS.Token)).Forget();
     //    }
 
-    //    var sbOut = new System.Text.StringBuilder();
-    //    var sbErr = new System.Text.StringBuilder();
+    //    //-----------------------------------------
+    //    // プロセス終了時処理登録
+    //    //-----------------------------------------
+    //    // Exited イベントを有効化
+    //    process.EnableRaisingEvents = true;
+    //    //process.Exited += async (sender, args) =>
+    //    //{
+    //    //    try
+    //    //    {
+    //    //        // イベント発火タイミングのズレによるエラー防止で一旦確実に終了を待つ
+    //    //        process.WaitForExit();
+    //    //        Debug.Log($"プロセス0");
+    //    //        // エラー読み取り
+    //    //        string stdErr = await process.StandardError.ReadToEndAsync();
+    //    //        // 結果読み取り
+    //    //        string stdOut = await process.StandardOutput.ReadToEndAsync();
+    //    //        Debug.Log($"プロセス1");
+
+    //    //        int code = process.ExitCode;
+
+    //    //        // 成功/失敗をここで完了させる
+    //    //        if (code != 0 || !string.IsNullOrEmpty(stdErr))
+    //    //            exited.TrySetException(new Exception($"ExitCode={code}\n{stdErr}"));
+    //    //        else
+    //    //            exited.TrySetResult(stdOut);
+    //    //    }
+    //    //    catch (Exception e)
+    //    //    {
+    //    //        exited.TrySetException(e);
+    //    //    }
+    //    //    finally
+    //    //    {
+    //    //        timeoutCTS.Cancel();
+    //    //        try
+    //    //        {
+    //    //            process.PerfectKill();
+    //    //        }
+    //    //        catch { }
+    //    //    }
+    //    //};
 
     //    //-----------------------------------------
-    //    // 行単位で詰まり回避
+    //    // プロセス抹消時処理登録
     //    //-----------------------------------------
-    //    process.OutputDataReceived += (_, e) => { if (e.Data != null) sbOut.AppendLine(e.Data); };
-    //    process.ErrorDataReceived += (_, e) => { if (e.Data != null) sbErr.AppendLine(e.Data); };
+    //    process.Disposed += (sender, args) =>
+    //    {
+    //        exited.TrySetResult(output);
+    //        timeoutCTS.Cancel();
+    //        fncOnDispose?.Invoke();
+    //    };
 
-    //    if (!process.Start())
-    //        throw new Exception("プロセス起動に失敗");
-
-    //    process.BeginOutputReadLine();
-    //    process.BeginErrorReadLine();
+    //    //-----------------------------------------
+    //    // 実行 -> 失敗した場合未完了タスクを残さない
+    //    //-----------------------------------------
+    //    try
+    //    {
+    //        // Start 失敗を確実に表面化
+    //        if (!process.Start())
+    //        {
+    //            exited.TrySetException(new Exception("プロセス実行失敗"));
+    //            timeoutCTS.Cancel();
+    //            try
+    //            {
+    //                process.PerfectKill();
+    //            }
+    //            catch { }
+    //            return await exited.Task;
+    //        }
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        exited.TrySetException(ex);
+    //        timeoutCTS.Cancel();
+    //        try
+    //        {
+    //            process.PerfectKill();
+    //        }
+    //        catch { }
+    //        return await exited.Task;
+    //    }
 
     //    //-----------------------------------------
     //    // 終了待ち（イベントを使わない）
@@ -189,178 +321,43 @@ public static class ProcessUtil
     //    {
     //        process.WaitForExit();           // 本体終了待ち
     //        process.WaitForExit(200);        // I/O ドレインの猶予
-    //        return true;
     //    });
-
-
     //    await waitExit;
-
-
-    //    var code = process.ExitCode;
-    //    var stdout = sbOut.ToString();
-    //    var stderr = sbErr.ToString();
 
     //    try
     //    {
-    //        process.PerfectKill();
-    //    }
-    //    catch { }
+    //        // イベント発火タイミングのズレによるエラー防止で一旦確実に終了を待つ
+    //        Debug.Log($"プロセス0");
+    //        // エラー読み取り
+    //        string stdErr = await process.StandardError.ReadToEndAsync();
+    //        // 結果読み取り
+    //        string stdOut = await process.StandardOutput.ReadToEndAsync();
+    //        Debug.Log($"プロセス1");
 
-    //    if (code != 0)
-    //    {
-    //        throw new Exception($"ExitCode={code}\n{stderr}");
+    //        int code = process.ExitCode;
+
+    //        // 成功/失敗をここで完了させる
+    //        if (code != 0 || !string.IsNullOrEmpty(stdErr))
+    //            exited.TrySetException(new Exception($"ExitCode={code}\n{stdErr}"));
+    //        else
+    //            exited.TrySetResult(stdOut);
     //    }
-    //    // 警告は返り値に付ける
-    //    else
-    //    if (!string.IsNullOrEmpty(stderr))
+    //    catch (Exception e)
     //    {
-    //        stdout += $"ExitCode={code} [警告]\n{stderr}";
+    //        exited.TrySetException(e);
+    //    }
+    //    finally
+    //    {
+    //        timeoutCTS.Cancel();
+    //        try
+    //        {
+    //            process.PerfectKill();
+    //        }
+    //        catch { }
     //    }
 
-    //    return stdout;
+    //    return await exited.Task;
     //}
-
-
-
-    public static async UniTask<string> ExeAsync_Light(this System.Diagnostics.Process process, float timeout = 0, Action fncOnDispose = null)
-    {
-        string output = "";
-        var timeoutCTS = new CancellationTokenSource();
-        var exited = new UniTaskCompletionSource<string>();
-
-        //-----------------------------------------
-        // タイムアウト時間が設定されている場合は登録
-        //-----------------------------------------
-        if (timeout > 0)
-        {
-            UniTask.RunOnThreadPool(() => process.Timeout(timeout, timeoutCTS.Token)).Forget();
-        }
-
-        //-----------------------------------------
-        // プロセス終了時処理登録
-        //-----------------------------------------
-        // Exited イベントを有効化
-        process.EnableRaisingEvents = true;
-        //process.Exited += async (sender, args) =>
-        //{
-        //    try
-        //    {
-        //        // イベント発火タイミングのズレによるエラー防止で一旦確実に終了を待つ
-        //        process.WaitForExit();
-        //        Debug.Log($"プロセス0");
-        //        // エラー読み取り
-        //        string stdErr = await process.StandardError.ReadToEndAsync();
-        //        // 結果読み取り
-        //        string stdOut = await process.StandardOutput.ReadToEndAsync();
-        //        Debug.Log($"プロセス1");
-
-        //        int code = process.ExitCode;
-
-        //        // 成功/失敗をここで完了させる
-        //        if (code != 0 || !string.IsNullOrEmpty(stdErr))
-        //            exited.TrySetException(new Exception($"ExitCode={code}\n{stdErr}"));
-        //        else
-        //            exited.TrySetResult(stdOut);
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        exited.TrySetException(e);
-        //    }
-        //    finally
-        //    {
-        //        timeoutCTS.Cancel();
-        //        try
-        //        {
-        //            process.PerfectKill();
-        //        }
-        //        catch { }
-        //    }
-        //};
-
-        //-----------------------------------------
-        // プロセス抹消時処理登録
-        //-----------------------------------------
-        process.Disposed += (sender, args) =>
-        {
-            exited.TrySetResult(output);
-            timeoutCTS.Cancel();
-            fncOnDispose?.Invoke();
-        };
-
-        //-----------------------------------------
-        // 実行 -> 失敗した場合未完了タスクを残さない
-        //-----------------------------------------
-        try
-        {
-            // Start 失敗を確実に表面化
-            if (!process.Start())
-            {
-                exited.TrySetException(new Exception("プロセス実行失敗"));
-                timeoutCTS.Cancel();
-                try
-                {
-                    process.PerfectKill();
-                }
-                catch { }
-                return await exited.Task;
-            }
-        }
-        catch (Exception ex)
-        {
-            exited.TrySetException(ex);
-            timeoutCTS.Cancel();
-            try
-            {
-                process.PerfectKill();
-            }
-            catch { }
-            return await exited.Task;
-        }
-
-        //-----------------------------------------
-        // 終了待ち（イベントを使わない）
-        //-----------------------------------------
-        UniTask waitExit = UniTask.RunOnThreadPool(() =>
-        {
-            process.WaitForExit();           // 本体終了待ち
-            process.WaitForExit(200);        // I/O ドレインの猶予
-        });
-        await waitExit;
-
-        try
-        {
-            // イベント発火タイミングのズレによるエラー防止で一旦確実に終了を待つ
-            Debug.Log($"プロセス0");
-            // エラー読み取り
-            string stdErr = await process.StandardError.ReadToEndAsync();
-            // 結果読み取り
-            string stdOut = await process.StandardOutput.ReadToEndAsync();
-            Debug.Log($"プロセス1");
-
-            int code = process.ExitCode;
-
-            // 成功/失敗をここで完了させる
-            if (code != 0 || !string.IsNullOrEmpty(stdErr))
-                exited.TrySetException(new Exception($"ExitCode={code}\n{stdErr}"));
-            else
-                exited.TrySetResult(stdOut);
-        }
-        catch (Exception e)
-        {
-            exited.TrySetException(e);
-        }
-        finally
-        {
-            timeoutCTS.Cancel();
-            try
-            {
-                process.PerfectKill();
-            }
-            catch { }
-        }
-
-        return await exited.Task;
-    }
 
 
     ///==============================================<summary>
