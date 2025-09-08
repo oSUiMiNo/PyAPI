@@ -100,9 +100,11 @@ public class PyEnvSetter
     static async UniTask IsInstalled_PyEnv()
     {
         Debug.Log($"pyenv インストール状況確認開始...");
-        string version = await CommandUtil.ExeToolCommand("pyenv --version");
+        string version = await PowerShellAPI.Command("pyenv --version");
         Debug.Log($"pyenv インストール状況確認完了　バージョン：{version}");
         Debug.Log($"pyenv 未インストール");
+        
+        //string version = await CommandUtil.ExeToolCommand("pyenv --version");
         //try
         //{
         //    Debug.Log($"pyenv インストール状況確認開始...");
@@ -132,7 +134,7 @@ public class PyEnvSetter
         // インストール直後に現在プロセスの PATH を更新
         RefreshPathForCurrentProcess();
 
-        string result = await CommandUtil.ExeToolCommand(psCmd, workingDir: userProfile);
+        string result = await PowerShellAPI.Command(psCmd, workingDir: userProfile);
         Debug.Log($"pyenv インストール完了");
         return true;
     }
@@ -170,7 +172,7 @@ public class PyEnvSetter
     static async UniTask<bool> IsInstalled_PyVer(string ver)
     {
         Debug.Log($"pyenv インストール済 Python バージョン確認開始...");
-        string result = await CommandUtil.ExeToolCommand("pyenv versions");
+        string result = await PowerShellAPI.Command("pyenv versions");
         Debug.Log($"pyenv インストール済 Python バージョン確認完了\n一覧\n {result}");
         return result.Contains(ver);
     }
@@ -182,7 +184,7 @@ public class PyEnvSetter
     static async UniTask InstallPyVer(string ver)
     {
         Debug.Log($"Python {ver} インストール開始...");
-        string result = await CommandUtil.ExeToolCommand($"pyenv install {ver}");
+        string result = await PowerShellAPI.Command($"pyenv install {ver}");
         Debug.Log($"Python {ver} インストール完了");
     }
 
@@ -192,7 +194,7 @@ public class PyEnvSetter
     ///</summary>=============================================
     static async UniTask<bool> SetLocalVer(string targDir, string ver)
     {
-        string result = await CommandUtil.ExeToolCommand($"pyenv local {ver}", targDir);
+        string result = await PowerShellAPI.Command($"pyenv local {ver}", targDir);
 
         // .python-versionファイルが作成されたか確認
         string versionFile = $"{targDir}/.python-version";
