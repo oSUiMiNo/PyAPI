@@ -105,8 +105,8 @@ public class PyEnvSetter
             "Invoke-WebRequest -UseBasicParsing -Uri \"https://raw.githubusercontent.com/pyenv-win/pyenv-win/master/pyenv-win/install-pyenv-win.ps1\" " +
             // インストール用 .bat からインストール
             "-OutFile \"./install-pyenv-win.ps1\"; & \"./install-pyenv-win.ps1\"" +
-            // 質問が来たら承認
-            " -Force",
+            //// 質問が来たら承認
+            //" -Force",
             // C:/Users/[ユーザ名] フォルダで実行 (どこで実行しても C:/Users/[ユーザ名] にインストールされる)
             usersDir
         );
