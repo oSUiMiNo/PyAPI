@@ -23,10 +23,20 @@ public class PyEnvSetter
             //-----------------------------------------
             // pyenv のインストールが未だならインストール
             //-----------------------------------------
-            if (!await IsInstalled_PyEnv())
-            {
-                await InstallPyEnv();
-            }
+            await IsInstalled_PyEnv();
+            //try
+            //{
+            //    await IsInstalled_PyEnv();
+            //}
+            //catch
+            //{
+            //    //await InstallPyEnv();
+            //}
+
+            //if (!await IsInstalled_PyEnv())
+            //{
+            //    //await InstallPyEnv();
+            //}
 
             //-----------------------------------------
             // 指定フォルダが存在しなければ作成
@@ -42,13 +52,19 @@ public class PyEnvSetter
             if (!await IsInstalled_PyVer(ver))
             {
                 Debug.Log($"Python {ver} がインストールされていない");
-                bool installSuccess = await InstallPyVer(ver);
-                if (!installSuccess)
-                {
-                    throw new Exception($"Python {ver} インストール失敗");
-                    //Debug.LogError($"Python {ver} インストール失敗");
-                    //return;
-                }
+                await InstallPyVer(ver);
+                //try
+                //{
+                //    await InstallPyVer(ver);
+                //}
+                //catch { throw; }
+                
+                //if (!installSuccess)
+                //{
+                //    throw new Exception($"Python {ver} インストール失敗");
+                //    //Debug.LogError($"Python {ver} インストール失敗");
+                //    //return;
+                //}
             }
             else
             {
@@ -68,11 +84,11 @@ public class PyEnvSetter
                 //Debug.LogError("pyenv localの設定失敗");
             }
         }
-        catch (Exception e)
-        {
-            throw new Exception($"エラー: {e.Message}");
-            //Debug.LogError($"エラー: {e.Message}");
-        }
+        catch { throw; }
+        //{
+        //    //throw new Exception($"エラー: {e.Message}");
+        //    //Debug.LogError($"エラー: {e.Message}");
+        //}
         Debug.Log($"PyEnv セットアップ完了\n{dir}");
     }
 
@@ -80,22 +96,16 @@ public class PyEnvSetter
     ///==============================================<summary>
     /// Python 3.12.5がインストールされているか確認
     ///</summary>=============================================
-    static async UniTask<bool> IsInstalled_PyEnv()
+    static async UniTask IsInstalled_PyEnv()
     {
         try
         {
             Debug.Log($"pyenv インストール状況確認開始...");
-            throw new InvalidOperationException("エクセプション");
             string version = await CommandUtil.ExeToolCommand("pyenv --version");
             Debug.Log($"pyenv インストール状況確認完了　バージョン：{version}");
-            return true;
+            Debug.Log($"pyenv 未インストール");
         }
-        catch(InvalidOperationException e)
-        {
-            Debug.Log($"エクセプション {e}");
-            Debug.Log("pyenv 未インストール");
-            return false;
-        }
+        catch { throw; }
     }
 
 
@@ -161,12 +171,11 @@ public class PyEnvSetter
     ///==============================================<summary>
     /// Python 3.12.5をインストール
     ///</summary>=============================================
-    static async UniTask<bool> InstallPyVer(string ver)
+    static async UniTask InstallPyVer(string ver)
     {
         Debug.Log($"Python {ver} インストール開始...");
         string result = await CommandUtil.ExeToolCommand($"pyenv install {ver}");
         Debug.Log($"Python {ver} インストール完了");
-        return true;
     }
 
 
