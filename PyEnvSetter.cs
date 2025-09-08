@@ -109,8 +109,7 @@ public class PyEnvSetter
         }
         catch (Exception e)
         {
-            Debug.Log($"2 {e}");
-            throw e;
+            throw;
         }
     }
 

@@ -14,8 +14,7 @@ public class EnvSetter : MonoBehaviour
         }
         catch(Exception e)
         {
-            Debug.Log($"3 {e}");
-            throw e;
+            throw;
         }
         await VEnvSetter.ExeFlow($"{Application.streamingAssetsPath}/PythonAssets/Env");
     }

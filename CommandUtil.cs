@@ -31,8 +31,7 @@ public static class CommandUtil
         }
         catch (Exception e)
         {
-            Debug.Log($"4 {e}");
-            throw e;
+            throw;
         }
     }
 

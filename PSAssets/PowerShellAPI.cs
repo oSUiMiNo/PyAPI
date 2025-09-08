@@ -53,8 +53,7 @@ public static class PowerShellAPI
         }
         catch(Exception e)
         {
-            Debug.Log($"0 {e}");
-            throw e;
+            throw;
         }
     }
 
