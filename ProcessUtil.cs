@@ -182,6 +182,7 @@ public static class ProcessUtil
                 Debug.Log($"エラー1");
                 throw new Exception($"プロセスエラー：{e}");
             }
+            Debug.Log($"エラー2");
             output = await process.StandardOutput.ReadToEndAsync();
             process.PerfectKill();
         };
