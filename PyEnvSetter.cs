@@ -177,7 +177,7 @@ public class PyEnvSetter
     {
         Debug.Log($"Python {ver} インストール開始...");
         string result = await PowerShellAPI.Command($"pyenv install {ver}");
-        Debug.Log($"Python {ver} インストール完了");
+        Debug.Log($"Python {ver} インストール完了\n{result}");
     }
 
 
@@ -188,7 +188,7 @@ public class PyEnvSetter
     {
         Debug.Log($"pyenv local を {ver} に設定開始...\nディレクトリ：{dir}");
         string result = await PowerShellAPI.Command($"pyenv local {ver}", dir);
-        Debug.Log($"pyenv local を {ver} に設定完了");
+        Debug.Log($"pyenv local を {ver} に設定完了\n{result}");
 
         //-----------------------------------------
         // .python-versionファイルが作成されたか確認
