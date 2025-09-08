@@ -111,14 +111,15 @@ public class PyEnvSetter
             usersDir
         );
         
+        Debug.Log($"pyenv インストール完了\n{result}");
+
         // インストール直後に現在プロセスの PATH を更新
         RefreshPathForCurrentProcess();
-
-        Debug.Log($"pyenv インストール完了\n{result}");
     }
 
     static void RefreshPathForCurrentProcess()
     {
+        Debug.Log($"PATH 更新開始");
         var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         var pyenvRoot = Path.Combine(userProfile, ".pyenv", "pyenv-win");
         var bin = Path.Combine(pyenvRoot, "bin");
@@ -140,6 +141,7 @@ public class PyEnvSetter
 
         var updated = string.Join(";", paths);
         Environment.SetEnvironmentVariable("PATH", updated, EnvironmentVariableTarget.Process);
+        Debug.Log($"PATH 更新完了");
     }
 
 
