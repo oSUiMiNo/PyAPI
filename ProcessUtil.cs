@@ -158,7 +158,7 @@ public static class ProcessUtil
         string output = "";
         var timeoutCTS = new CancellationTokenSource();
         var exited = new UniTaskCompletionSource<string>();
-        
+
         //-----------------------------------------
         // タイムアウト時間が設定されている場合は登録
         //-----------------------------------------
@@ -169,7 +169,7 @@ public static class ProcessUtil
 
         var sbOut = new System.Text.StringBuilder();
         var sbErr = new System.Text.StringBuilder();
-        
+
         //-----------------------------------------
         // 行単位で詰まり回避
         //-----------------------------------------
@@ -185,25 +185,26 @@ public static class ProcessUtil
         //-----------------------------------------
         // 終了待ち（イベントを使わない）
         //-----------------------------------------
-        var waitExit = UniTask.RunOnThreadPool(() =>
+        UniTask waitExit = UniTask.RunOnThreadPool(() =>
         {
             process.WaitForExit();           // 本体終了待ち
-            process.WaitForExit(200);        // I/O ドレインの猶予
+            process.WaitForExit(2000);        // I/O ドレインの猶予
             return true;
         });
 
-        
+
         await waitExit;
-        
+
 
         var code = process.ExitCode;
         var stdout = sbOut.ToString();
         var stderr = sbErr.ToString();
 
-        try 
+        try
         {
             process.PerfectKill();
-        } catch { }
+        }
+        catch { }
 
         if (code != 0)
         {
@@ -234,6 +235,16 @@ public static class ProcessUtil
     //    {
     //        UniTask.RunOnThreadPool(() => process.Timeout(timeout, timeoutCTS.Token)).Forget();
     //    }
+
+    //    //-----------------------------------------
+    //    // 終了待ち（イベントを使わない）
+    //    //-----------------------------------------
+    //    UniTask waitExit = UniTask.RunOnThreadPool(() =>
+    //    {
+    //        process.WaitForExit();           // 本体終了待ち
+    //        process.WaitForExit(100);        // I/O ドレインの猶予
+    //        return true;
+    //    });
 
     //    //-----------------------------------------
     //    // プロセス終了時処理登録
