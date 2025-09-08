@@ -180,7 +180,8 @@ public static class ProcessUtil
             if (!string.IsNullOrEmpty(e))
             {
                 Debug.Log($"5 {e}");
-                throw new Exception($"プロセスエラー：{e}");
+                exited.TrySetException(new Exception("プロセス実行失敗"));
+                //throw new Exception($"プロセスエラー：{e}");
             }
             output = await process.StandardOutput.ReadToEndAsync();
             process.PerfectKill();
