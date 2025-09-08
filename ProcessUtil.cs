@@ -179,10 +179,9 @@ public static class ProcessUtil
             string e = await process.StandardError.ReadToEndAsync();
             if (!string.IsNullOrEmpty(e))
             {
-                Debug.Log($"エラー1");
+                Debug.Log($"5 {e}");
                 throw new Exception($"プロセスエラー：{e}");
             }
-            Debug.Log($"エラー2");
             output = await process.StandardOutput.ReadToEndAsync();
             process.PerfectKill();
         };
