@@ -207,111 +207,16 @@ public static class ProcessUtil
 
         if (code != 0)
         {
-            throw new Exception($"{stderr}");
+            throw new Exception($"ExitCode={code}\n{stderr}");
         }
 
-        // PowerShell が警告を STDERR に出す場合がある。必要なら結合して返す:
+        // 警告は返り値に付ける or ログに出すだけ
         if (!string.IsNullOrEmpty(stderr))
         {
-            throw new Exception($"{stderr}");
+            stdout += "\n[STDERR]\n" + stderr; // あるいは Debug.LogWarning(stderr);
         }
-        //stdout += "\n[STDERR]\n" + stderr;
 
         return stdout;
-
-        //-----------------------------------------
-        // プロセス終了時処理登録
-        //-----------------------------------------
-        //// Exited イベントを有効化
-        //process.EnableRaisingEvents = true;
-        //process.Exited += async (sender, args) =>
-        //{
-        //    //// イベント発火タイミングのズレによるエラー防止で一旦確実に終了を待つ
-        //    //process.WaitForExit();
-        //    //// エラー読み取り
-        //    //string e = await process.StandardError.ReadToEndAsync();
-        //    //if (!string.IsNullOrEmpty(e))
-        //    //{
-        //    //    exited.TrySetException(new Exception($"エラー：{e}"));
-        //    //}
-        //    //output = await process.StandardOutput.ReadToEndAsync();
-        //    //process.PerfectKill();
-
-        //    try
-        //    {
-        //        // イベント発火タイミングのズレによるエラー防止で一旦確実に終了を待つ
-        //        process.WaitForExit();
-        //        Debug.Log($"プロセス0");
-        //        // エラー読み取り
-        //        string stdErr = await process.StandardError.ReadToEndAsync();
-        //        // 結果読み取り
-        //        string stdOut = await process.StandardOutput.ReadToEndAsync();
-        //        Debug.Log($"プロセス1");
-
-        //        int code = process.ExitCode;
-
-        //        // 成功/失敗をここで完了させる
-        //        if (code != 0 || !string.IsNullOrEmpty(stdErr))
-        //            exited.TrySetException(new Exception($"ExitCode={code}\n{stdErr}"));
-        //        else
-        //            exited.TrySetResult(stdOut);
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        exited.TrySetException(e);
-        //    }
-        //    finally
-        //    {
-        //        timeoutCTS.Cancel();
-        //        try
-        //        {
-        //            process.PerfectKill();
-        //        }
-        //        catch { }
-        //    }
-        //};
-
-        ////-----------------------------------------
-        //// プロセス抹消時処理登録
-        ////-----------------------------------------
-        //process.Disposed += (sender, args) =>
-        //{
-        //    exited.TrySetResult(output);
-        //    timeoutCTS.Cancel();
-        //    fncOnDispose?.Invoke();
-        //};
-
-        ////-----------------------------------------
-        //// 実行 -> 失敗した場合未完了タスクを残さない
-        ////-----------------------------------------
-        //try
-        //{
-        //    // Start 失敗を確実に表面化
-        //    if (!process.Start())
-        //    {
-        //        exited.TrySetException(new Exception("プロセス実行失敗"));
-        //        timeoutCTS.Cancel();
-        //        try
-        //        {
-        //            process.Dispose();
-        //        }
-        //        catch { }
-        //        return exited.Task;
-        //    }
-        //}
-        //catch (Exception ex)
-        //{
-        //    exited.TrySetException(ex);
-        //    timeoutCTS.Cancel();
-        //    try
-        //    {
-        //        process.Dispose();
-        //    }
-        //    catch { }
-        //    return exited.Task;
-        //}
-
-        //return exited.Task;
     }
 
 
