@@ -107,7 +107,11 @@ public class PyEnvSetter
             Debug.Log($"pyenv インストール状況確認完了　バージョン：{version}");
             Debug.Log($"pyenv 未インストール");
         }
-        catch { throw; }
+        catch (Exception e)
+        {
+            Debug.Log($"2 {e}");
+            throw;
+        }
     }
 
 
