@@ -173,16 +173,45 @@ public static class ProcessUtil
         process.EnableRaisingEvents = true;
         process.Exited += async (sender, args) =>
         {
-            // イベント発火タイミングのズレによるエラー防止で一旦確実に終了を待つ
-            process.WaitForExit();
-            // エラー読み取り
-            string e = await process.StandardError.ReadToEndAsync();
-            if (!string.IsNullOrEmpty(e))
+            //// イベント発火タイミングのズレによるエラー防止で一旦確実に終了を待つ
+            //process.WaitForExit();
+            //// エラー読み取り
+            //string e = await process.StandardError.ReadToEndAsync();
+            //if (!string.IsNullOrEmpty(e))
+            //{
+            //    exited.TrySetException(new Exception($"エラー：{e}"));
+            //}
+            //output = await process.StandardOutput.ReadToEndAsync();
+            //process.PerfectKill();
+
+            try
             {
-                exited.TrySetException(new Exception($"エラー：{e}"));
+                // イベント発火タイミングのズレによるエラー防止で一旦確実に終了を待つ
+                process.WaitForExit();
+                // エラー読み取り
+                string stdErr = await process.StandardError.ReadToEndAsync();
+                // 結果読み取り
+                string stdOut = await process.StandardOutput.ReadToEndAsync();
+                int code = process.ExitCode;
+
+                // 成功/失敗をここで完了させる
+                if (code != 0 || !string.IsNullOrEmpty(stdErr))
+                    exited.TrySetException(new Exception($"ExitCode={code}\n{stdErr}"));
+                else
+                    exited.TrySetResult(stdOut);
             }
-            output = await process.StandardOutput.ReadToEndAsync();
-            process.PerfectKill();
+            catch (Exception e)
+            {
+                exited.TrySetException(e);
+            }
+            finally
+            {
+                timeoutCTS.Cancel();
+                try
+                {
+                    process.PerfectKill();
+                } catch { }
+            }
         };
 
         //-----------------------------------------
