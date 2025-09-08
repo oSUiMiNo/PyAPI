@@ -165,6 +165,7 @@ public class PyEnvSetter
     {
         Debug.Log($"pyenv インストール済 Python バージョン確認開始...");
         string result = await PowerShellAPI.Command("pyenv versions");
+        if (!result.Contains(ver)) throw new Exception();
         Debug.Log($"pyenv インストール済 Python バージョン確認完了\n一覧：\n {result}");
     }
 
