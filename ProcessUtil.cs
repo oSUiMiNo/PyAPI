@@ -66,9 +66,9 @@ public static class ProcessUtil
             UniTask.RunOnThreadPool(() => process.Timeout(timeout, timeoutCTS.Token)).Forget();
         }
 
-        //--------------------------------------
+        //-----------------------------------------
         // プロセス終了時処理
-        //--------------------------------------
+        //-----------------------------------------
         // Exited (プロセス終了) イベントを有効化
         process.EnableRaisingEvents = true;
         process.Exited += async (sender, args) =>
@@ -84,9 +84,9 @@ public static class ProcessUtil
             process.PerfectKill();
         };
 
-        //--------------------------------------
+        //-----------------------------------------
         // プロセス抹消時処理
-        //--------------------------------------
+        //-----------------------------------------
         process.Disposed += (sender, args) =>
         {
             timeoutCTS.Cancel();
@@ -122,18 +122,19 @@ public static class ProcessUtil
             throw;
         }
 
-        //--------------------------------------
+        //-----------------------------------------
         // 外部からのキャンセルを設定
-        //--------------------------------------
+        //-----------------------------------------
         try
         {
             // 外部キャンセルを反映
             await exited.Task.AttachExternalCancellation(externalCT);
             Debug.Log($"プロセス完了");
         }
-        //--------------------------------------
+
+        //-----------------------------------------
         // 外部からキャンセルされた場合に走る処理
-        //--------------------------------------
+        //-----------------------------------------
         catch (OperationCanceledException)
         {
             Debug.Log("外部からキャンセルされた");
@@ -165,9 +166,9 @@ public static class ProcessUtil
             UniTask.RunOnThreadPool(() => process.Timeout(timeout, timeoutCTS.Token)).Forget();
         }
 
-        //--------------------------------------
+        //-----------------------------------------
         // プロセス終了時処理登録
-        //--------------------------------------
+        //-----------------------------------------
         // Exited イベントを有効化
         process.EnableRaisingEvents = true;
         process.Exited += async (sender, args) =>
@@ -176,14 +177,18 @@ public static class ProcessUtil
             process.WaitForExit();
             // エラー読み取り
             string e = await process.StandardError.ReadToEndAsync();
-            if (!string.IsNullOrEmpty(e)) throw new Exception($"プロセスエラー：{e}");
+            if (!string.IsNullOrEmpty(e))
+            {
+                Debug.Log($"エラー1");
+                throw new Exception($"プロセスエラー：{e}");
+            }
             output = await process.StandardOutput.ReadToEndAsync();
             process.PerfectKill();
         };
 
-        //--------------------------------------
+        //-----------------------------------------
         // プロセス抹消時処理登録
-        //--------------------------------------
+        //-----------------------------------------
         process.Disposed += (sender, args) =>
         {
             exited.TrySetResult(output);
