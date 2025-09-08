@@ -207,7 +207,7 @@ public static class ProcessUtil
 
         if (code != 0)
         {
-            throw new Exception($"ExitCode={code}\n{stderr}");
+            throw new Exception($"{stderr}");
         }
         // Œx‚Í•Ô‚è’l‚É•t‚¯‚é
         else
