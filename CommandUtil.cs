@@ -24,15 +24,17 @@ public static class CommandUtil
     ///</summary>=============================================
     public static async UniTask<string> ExeToolCommand(string command, string workingDir = null)
     {
-        try
-        {
-            string result = await PowerShellAPI.Command(command, workingDir);
-            return result;
-        }
-        catch (Exception e)
-        {
-            throw;
-        }
+        string result = await PowerShellAPI.Command(command, workingDir);
+        return result;
+        //try
+        //{
+        //    string result = await PowerShellAPI.Command(command, workingDir);
+        //    return result;
+        //}
+        //catch (Exception e)
+        //{
+        //    throw;
+        //}
     }
 
     public static async UniTask<string> ExeToolCommand_Old(string command, string workingDir = null)

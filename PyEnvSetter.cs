@@ -23,16 +23,16 @@ public class PyEnvSetter
             //-----------------------------------------
             // pyenv のインストールが未だならインストール
             //-----------------------------------------
-            //await IsInstalled_PyEnv();
-            try
-            {
-                await IsInstalled_PyEnv();
-            }
-            catch(Exception e)
-            {
-                throw;
-                //await InstallPyEnv();
-            }
+            await IsInstalled_PyEnv();
+            //try
+            //{
+            //    await IsInstalled_PyEnv();
+            //}
+            //catch(Exception e)
+            //{
+            //    throw;
+            //    //await InstallPyEnv();
+            //}
 
             //if (!await IsInstalled_PyEnv())
             //{
@@ -99,17 +99,21 @@ public class PyEnvSetter
     ///</summary>=============================================
     static async UniTask IsInstalled_PyEnv()
     {
-        try
-        {
-            Debug.Log($"pyenv インストール状況確認開始...");
-            string version = await CommandUtil.ExeToolCommand("pyenv --version");
-            Debug.Log($"pyenv インストール状況確認完了　バージョン：{version}");
-            Debug.Log($"pyenv 未インストール");
-        }
-        catch (Exception e)
-        {
-            throw;
-        }
+        Debug.Log($"pyenv インストール状況確認開始...");
+        string version = await CommandUtil.ExeToolCommand("pyenv --version");
+        Debug.Log($"pyenv インストール状況確認完了　バージョン：{version}");
+        Debug.Log($"pyenv 未インストール");
+        //try
+        //{
+        //    Debug.Log($"pyenv インストール状況確認開始...");
+        //    string version = await CommandUtil.ExeToolCommand("pyenv --version");
+        //    Debug.Log($"pyenv インストール状況確認完了　バージョン：{version}");
+        //    Debug.Log($"pyenv 未インストール");
+        //}
+        //catch (Exception e)
+        //{
+        //    throw;
+        //}
     }
 
 
