@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using static Codice.Client.Commands.WkTree.WorkspaceTreeNode;
+using static Codice.CM.WorkspaceServer.WorkspaceTreeDataStore;
 using Debug = UnityEngine.Debug;
 
 
@@ -19,7 +21,7 @@ public class PyEnvSetter
         try
         {
             Debug.Log($"Pyenv セットアップ開始...\n{dir}");
-
+            
             //-----------------------------------------
             // pyenv のインストールが未だならインストール
             //-----------------------------------------
@@ -29,25 +31,9 @@ public class PyEnvSetter
             }
             catch
             {
-                Debug.Log($"pyenv 未インストール");
+                Debug.Log($"pyenv がインストールされていない");
                 await InstallPyEnv();
             }
-
-            //try
-            //{
-            //    await IsInstalled_PyEnv();
-            //}
-            //catch(Exception e)
-            //{
-            //    throw;
-            //    //await InstallPyEnv();
-            //}
-
-            //if (!await IsInstalled_PyEnv())
-            //{
-            //    //await InstallPyEnv();
-            //}
-
             //-----------------------------------------
             // 指定フォルダが存在しなければ作成
             //-----------------------------------------
@@ -59,40 +45,28 @@ public class PyEnvSetter
             //-----------------------------------------
             // pyenv に指定バージョンがインストールされていなければインストール
             //-----------------------------------------
-            if (!await IsInstalled_PyVer(ver))
+            try
+            {
+                await IsInstalled_PyVer(ver);
+            }
+            catch
             {
                 Debug.Log($"Python {ver} がインストールされていない");
                 await InstallPyVer(ver);
-                //try
-                //{
-                //    await InstallPyVer(ver);
-                //}
-                //catch { throw; }
-                
-                //if (!installSuccess)
-                //{
-                //    throw new Exception($"Python {ver} インストール失敗");
-                //    //Debug.LogError($"Python {ver} インストール失敗");
-                //    //return;
-                //}
             }
-            else
-            {
-                Debug.Log($"Python {ver} は既にインストールされている");
-            }
+            //if (!await IsInstalled_PyVer(ver))
+            //{
+            //    Debug.Log($"Python {ver} がインストールされていない");
+            //    await InstallPyVer(ver);
+            //}
+            //else
+            //{
+            //    Debug.Log($"Python {ver} は既にインストールされている");
+            //}
             //-----------------------------------------
             // pyenv localを指定バージョンに設定
             //-----------------------------------------
-            bool setLocalSuccess = await SetLocalVer(dir, ver);
-            if (setLocalSuccess)
-            {
-                Debug.Log($"pyenv local {ver}の設定完了: {dir}");
-            }
-            else
-            {
-                throw new Exception($"pyenv localの設定失敗");
-                //Debug.LogError("pyenv localの設定失敗");
-            }
+            await SetLocalVer(dir, ver);
         }
         catch { throw; }
         //{
@@ -108,37 +82,36 @@ public class PyEnvSetter
     ///</summary>=============================================
     static async UniTask IsInstalled_PyEnv()
     {
-        Debug.Log($"pyenv インストール状況確認開始...");
+        Debug.Log($"pyenv バージョン確認開始...");
         string version = await PowerShellAPI.Command("pyenv --version");
-        Debug.Log($"pyenv インストール状況確認完了　バージョン：{version}");
+        Debug.Log($"pyenv バージョン確認完了　Ver：{version}");
     }
 
-
-    static async UniTask AAA()
-    {
-        await Delay.Second(1);
-        throw new Exception($"AAA");
-    }
 
     ///==============================================<summary>
     /// Python 3.12.5をインストール
     ///</summary>=============================================
-    static async UniTask<bool> InstallPyEnv()
+    static async UniTask InstallPyEnv()
     {
         Debug.Log($"pyenv インストール開始...");
-        string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string users = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
-        string psCmd =
-            "Invoke-WebRequest -UseBasicParsing -Uri \"https://raw.githubusercontent.com/pyenv-win/pyenv-win/master/pyenv-win/install-pyenv-win.ps1\" " +
-            "-OutFile \"./install-pyenv-win.ps1\"; & \"./install-pyenv-win.ps1\"";
+        //string psCmd =
+        //    "Invoke-WebRequest -UseBasicParsing -Uri \"https://raw.githubusercontent.com/pyenv-win/pyenv-win/master/pyenv-win/install-pyenv-win.ps1\" " +
+        //    "-OutFile \"./install-pyenv-win.ps1\"; & \"./install-pyenv-win.ps1\"";
 
         // インストール直後に現在プロセスの PATH を更新
         RefreshPathForCurrentProcess();
 
-        await AAA();
-        //string result = await PowerShellAPI.Command(psCmd, workingDir: userProfile);
-        //Debug.Log($"pyenv インストール完了");
-        return true;
+        string result = await PowerShellAPI.Command(
+            // pyenv インストールコマンド
+            "Invoke-WebRequest -UseBasicParsing -Uri \"https://raw.githubusercontent.com/pyenv-win/pyenv-win/master/pyenv-win/install-pyenv-win.ps1\" " +
+            "-OutFile \"./install-pyenv-win.ps1\"; & \"./install-pyenv-win.ps1\"",
+            // C:/Users/[ユーザ名] フォルダで実行 (どこで実行しても C:/Users/[ユーザ名] にインストールされる)
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+        );
+        Debug.Log($"{result}");
+        Debug.Log($"pyenv インストール完了");
     }
 
     static void RefreshPathForCurrentProcess()
@@ -167,16 +140,14 @@ public class PyEnvSetter
     }
 
 
-
     ///==============================================<summary>
     /// Python 3.12.5がインストールされているか確認
     ///</summary>=============================================
-    static async UniTask<bool> IsInstalled_PyVer(string ver)
+    static async UniTask IsInstalled_PyVer(string ver)
     {
         Debug.Log($"pyenv インストール済 Python バージョン確認開始...");
         string result = await PowerShellAPI.Command("pyenv versions");
-        Debug.Log($"pyenv インストール済 Python バージョン確認完了\n一覧\n {result}");
-        return result.Contains(ver);
+        Debug.Log($"pyenv インストール済 Python バージョン確認完了\n一覧：\n {result}");
     }
 
 
@@ -194,18 +165,24 @@ public class PyEnvSetter
     ///==============================================<summary>
     /// 指定フォルダに pyenv localを設定
     ///</summary>=============================================
-    static async UniTask<bool> SetLocalVer(string targDir, string ver)
+    static async UniTask SetLocalVer(string dir, string ver)
     {
-        string result = await PowerShellAPI.Command($"pyenv local {ver}", targDir);
+        Debug.Log($"{dir} の pyenv local を {ver} に設定開始...");
+        string result = await PowerShellAPI.Command($"pyenv local {ver}", dir);
+        Debug.Log($"{dir} の pyenv local を {ver} に設定完了");
 
+        //-----------------------------------------
         // .python-versionファイルが作成されたか確認
-        string versionFile = $"{targDir}/.python-version";
-        if (File.Exists(versionFile))
+        //-----------------------------------------
+        string verFile = $"{dir}/.python-version";
+        if (File.Exists(verFile))
         {
-            string content = await File.ReadAllTextAsync(versionFile);
-            Debug.Log($".python-versionファイルが作成された: {content.Trim()}");
-            return true;
+            string content = await File.ReadAllTextAsync(verFile);
+            Debug.Log($".python-version ファイルが作成された：{content.Trim()}");
         }
-        return false;
+        else
+        {
+            throw new Exception($".python-version ファイルが作成されなかった");
+        }
     }
 }
