@@ -176,7 +176,7 @@ public static class ProcessUtil
             process.WaitForExit();
             // エラー読み取り
             string e = await process.StandardError.ReadToEndAsync();
-            if (!string.IsNullOrEmpty(e)) throw new InvalidOperationException($"プロセスエラー：{e}");
+            if (!string.IsNullOrEmpty(e)) throw new Exception($"プロセスエラー：{e}");
             output = await process.StandardOutput.ReadToEndAsync();
             process.PerfectKill();
         };
@@ -199,25 +199,25 @@ public static class ProcessUtil
             // Start 失敗を確実に表面化
             if (!process.Start())
             {
+                exited.TrySetException(new Exception("プロセス実行失敗"));
                 timeoutCTS.Cancel();
                 try
                 {
                     process.Dispose();
                 }
                 catch { }
-                exited.TrySetException(new Exception("プロセス実行失敗"));
                 return exited.Task;
             }
         }
         catch (Exception ex)
         {
+            exited.TrySetException(ex);
             timeoutCTS.Cancel();
             try
             {
                 process.Dispose();
             }
             catch { }
-            exited.TrySetException(ex);
             return exited.Task;
         }
 
