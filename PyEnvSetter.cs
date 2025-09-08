@@ -28,8 +28,9 @@ public class PyEnvSetter
             {
                 await IsInstalled_PyEnv();
             }
-            catch
+            catch(Exception e)
             {
+                Debug.Log($"1 {e}");
                 throw;
                 //await InstallPyEnv();
             }

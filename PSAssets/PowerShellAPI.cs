@@ -1,6 +1,7 @@
 using Cysharp.Threading.Tasks;
 using System;
 using System.Text;
+using Debug = UnityEngine.Debug;
 
 
 //****************************************************************
@@ -49,7 +50,11 @@ public static class PowerShellAPI
             };
             return await process.ExeAsync_Light(timeout);
         }
-        catch { throw; }
+        catch(Exception e)
+        {
+            Debug.Log($"0 {e}");
+            throw;
+        }
     }
 
 
