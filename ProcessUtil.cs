@@ -207,13 +207,13 @@ public static class ProcessUtil
 
         if (code != 0)
         {
-            throw new Exception($"{stderr}");
+            throw new Exception($"ExitCode={code}\n{stderr}");
         }
         // åxçêÇÕï‘ÇËílÇ…ïtÇØÇÈ
         else
         if (!string.IsNullOrEmpty(stderr))
         {
-            stdout += "\n[åxçê]\n" + stderr;
+            stdout += $"ExitCode={code} [åxçê]\n{stderr}";
         }
 
         return stdout;
