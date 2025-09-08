@@ -95,36 +95,36 @@ public class PyEnvSetter
         // C:/Users/[ユーザ名] フォルダ
         string usersDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
-        string ps = @"
-$ErrorActionPreference = 'Stop';
-Set-Location -LiteralPath $env:USERPROFILE;
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;
-Set-ExecutionPolicy RemoteSigned -Scope Process -Force;
+        //        string ps = @"
+        //$ErrorActionPreference = 'Stop';
+        //Set-Location -LiteralPath $env:USERPROFILE;
+        //[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;
+        //Set-ExecutionPolicy RemoteSigned -Scope Process -Force;
 
-$dl = Join-Path $env:TEMP 'install-pyenv-win.ps1';
-Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/pyenv-win/pyenv-win/master/pyenv-win/install-pyenv-win.ps1' -OutFile $dl;
-& $dl;
-exit 0
-";
+        //$dl = Join-Path $env:TEMP 'install-pyenv-win.ps1';
+        //Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/pyenv-win/pyenv-win/master/pyenv-win/install-pyenv-win.ps1' -OutFile $dl;
+        //& $dl;
+        //exit 0
+        //";
 
-        string result = await PowerShellAPI.Command(ps, usersDir);
+        //        string result = await PowerShellAPI.Command(ps, usersDir);
 
-        //// pyenv インストールコマンド
-        //string result = await PowerShellAPI.Command(
-        //    // 外部スクリプトの実行が許可
-        //    "Set-ExecutionPolicy RemoteSigned -Scope Process" +
-        //    // 質問が来たら承認
-        //    " -Force;" +
-        //    // インストール用 .bat を DL
-        //    "Invoke-WebRequest -UseBasicParsing -Uri \"https://raw.githubusercontent.com/pyenv-win/pyenv-win/master/pyenv-win/install-pyenv-win.ps1\" " +
-        //    // インストール用 .bat からインストール
-        //    "-OutFile \"./install-pyenv-win.ps1\"; & \"./install-pyenv-win.ps1\"" +
-        //    //// 質問が来たら承認
-        //    //" -Force",
-        //    // C:/Users/[ユーザ名] フォルダで実行 (どこで実行しても C:/Users/[ユーザ名] にインストールされる)
-        //    usersDir
-        //);
-        
+        // pyenv インストールコマンド
+        string result = await PowerShellAPI.Command(
+            // 外部スクリプトの実行が許可
+            "Set-ExecutionPolicy RemoteSigned -Scope Process" +
+            // 質問が来たら承認
+            " -Force;" +
+            // インストール用 .bat を DL
+            "Invoke-WebRequest -UseBasicParsing -Uri \"https://raw.githubusercontent.com/pyenv-win/pyenv-win/master/pyenv-win/install-pyenv-win.ps1\" " +
+            // インストール用 .bat からインストール
+            "-OutFile \"./install-pyenv-win.ps1\"; & \"./install-pyenv-win.ps1\"" +
+            //// 質問が来たら承認
+            //" -Force",
+            // C:/Users/[ユーザ名] フォルダで実行 (どこで実行しても C:/Users/[ユーザ名] にインストールされる)
+            usersDir
+        );
+
         Debug.Log($"pyenv インストール完了\n{result}");
 
         // インストール直後に現在プロセスの PATH を更新

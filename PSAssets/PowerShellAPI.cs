@@ -35,7 +35,7 @@ public static class PowerShellAPI
         {
             StartInfo = new(PsExeFile)
             {
-                Arguments = $"-NoProfile -ExecutionPolicy Bypass" +
+                Arguments = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass" +
                             $" -EncodedCommand {command}",
                 WorkingDirectory = workingDir ?? Environment.CurrentDirectory,
                 UseShellExecute = false, // シェルを使用しない
