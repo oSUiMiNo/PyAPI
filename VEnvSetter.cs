@@ -88,7 +88,7 @@ public static class VEnvSetter
         {
             if (lines[i].StartsWith("home ="))
             {
-                lines[i] = @$"home = {usersDir}\.pyenv\pyenv-win\versions\3.12.5";
+                lines[i] = @$"home = {usersDir}\.pyenv\pyenv-win\versions\3.12.5\python.exe";
             }
         }
         // ã‘‚«•Û‘¶
