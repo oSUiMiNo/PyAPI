@@ -59,17 +59,17 @@ public static class ProcessUtil
         var timeoutCTS = new CancellationTokenSource();
         var exited = new UniTaskCompletionSource();
 
-        //-----------------------------------------
+        //--------------------------------------
         // タイムアウト時間が設定されている場合は登録
-        //-----------------------------------------
+        //--------------------------------------
         if (timeout > 0)
         {
             UniTask.RunOnThreadPool(() => process.Timeout(timeout, timeoutCTS.Token)).Forget();
         }
 
-        //-----------------------------------------
+        //--------------------------------------
         // プロセス終了時処理
-        //-----------------------------------------
+        //--------------------------------------
         // Exited (プロセス終了) イベントを有効化
         process.EnableRaisingEvents = true;
         process.Exited += async (sender, args) =>
@@ -85,18 +85,18 @@ public static class ProcessUtil
             process.PerfectKill();
         };
 
-        //-----------------------------------------
+        //--------------------------------------
         // プロセス抹消時処理
-        //-----------------------------------------
+        //--------------------------------------
         process.Disposed += (sender, args) =>
         {
             timeoutCTS.Cancel();
             fncOnDispose?.Invoke();
         };
 
-        //-----------------------------------------
+        //--------------------------------------
         // 実行 -> 失敗した場合未完了タスクを残さない
-        //-----------------------------------------
+        //--------------------------------------
         try
         {
             // Start 失敗を確実に表面化
@@ -123,9 +123,9 @@ public static class ProcessUtil
             throw;
         }
 
-        //-----------------------------------------
+        //--------------------------------------
         // 外部からのキャンセルを設定
-        //-----------------------------------------
+        //--------------------------------------
         try
         {
             // 外部キャンセルを反映
@@ -133,9 +133,9 @@ public static class ProcessUtil
             Debug.Log($"プロセス完了");
         }
 
-        //-----------------------------------------
+        //--------------------------------------
         // 外部からキャンセルされた場合に走る処理
-        //-----------------------------------------
+        //--------------------------------------
         catch (OperationCanceledException)
         {
             Debug.Log("外部からキャンセルされた");
@@ -158,9 +158,9 @@ public static class ProcessUtil
         var timeoutCTS = new CancellationTokenSource();
         var exited = new UniTaskCompletionSource<string>();
 
-        //-----------------------------------------
+        //--------------------------------------
         // タイムアウト時間が設定されている場合は登録
-        //-----------------------------------------
+        //--------------------------------------
         if (timeout > 0)
         {
             UniTask.RunOnThreadPool(() => process.Timeout(timeout, timeoutCTS.Token)).Forget();
@@ -169,9 +169,9 @@ public static class ProcessUtil
         StringBuilder sbOut = new ();
         StringBuilder sbErr = new ();
 
-        //-----------------------------------------
+        //--------------------------------------
         // 行単位で詰まり回避
-        //-----------------------------------------
+        //--------------------------------------
         process.OutputDataReceived += (_, e) => { if (e.Data != null) sbOut.AppendLine(e.Data); };
         process.ErrorDataReceived += (_, e) => { if (e.Data != null) sbErr.AppendLine(e.Data); };
 
@@ -183,9 +183,9 @@ public static class ProcessUtil
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        //-----------------------------------------
+        //--------------------------------------
         // 終了待ち（イベントを使わない）
-        //-----------------------------------------
+        //--------------------------------------
         UniTask waitExit = UniTask.RunOnThreadPool(() =>
         {
             process.WaitForExit();           // 本体終了待ち

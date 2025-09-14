@@ -8,8 +8,8 @@ using System.IO;
 public class AutoCopyPythonAPI : AssetPostprocessor
 {
     public static string PJT => Application.dataPath.Replace("/Assets", "");
-    public static string SourceFile => $"{PJT}/Packages/jp.maku.maku_utillity/PythonAPI/PythonAssets/PyAPI.py";
-    public static string DestFile => $"{Application.dataPath}/PythonAssets/PyAPI.py";
+    public static string SourceFile => $"{PJT}/Packages/jp.maku.pyapi/Py/PyAPI.py";
+    public static string DestFile => $"{Application.dataPath}/Py/PyAPI.py";
 
     //static string destDirName = "PythonAssets";
     //static string destFileName = "PyAPI.py";
@@ -20,7 +20,6 @@ public class AutoCopyPythonAPI : AssetPostprocessor
     static AutoCopyPythonAPI()
     {
         CopyAsset();
-        //Debug.Log($"{PJT}");
     }
 
     //private static void OnPostprocessAllAssets(
@@ -36,6 +35,7 @@ public class AutoCopyPythonAPI : AssetPostprocessor
 
     static void CopyAsset()
     {
+        //return;
         //string projectPath = Application.dataPath.Replace("/Assets", "");
         //string destinationFolderPath = Path.Combine(Application.dataPath, destinationFolderName);
         //string destinationFilePath = Path.Combine(destinationFolderPath, destinationFileName);

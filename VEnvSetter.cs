@@ -18,9 +18,9 @@ public static class VEnvSetter
     public static async UniTask ExeFlow(string dir)
     {
         Debug.Log($"VEnv セットアップ開始...\n{dir}");
-        //-----------------------------------------
+        //--------------------------------------
         // .venv が無ければ作成
-        //-----------------------------------------
+        //--------------------------------------
         string venvDir = $"{dir}/.venv";
         if (!Directory.Exists(venvDir))
         {
@@ -28,9 +28,9 @@ public static class VEnvSetter
             // 環境変数を気にせず pyenv 経由で python を起動してコマンドを実行
             await PowerShellAPI.Command("pyenv exec python -m venv .venv", dir);
         }
-        //-----------------------------------------
+        //--------------------------------------
         // pyenv.cfg ファイルの home パスを自分のPCに置き換える
-        //-----------------------------------------
+        //--------------------------------------
         string cfgFile = $"{venvDir}/pyvenv.cfg";
         // pyenv.cfg ファイルが無ければ .venv 削除して再設定
         if (!File.Exists(cfgFile))
@@ -43,32 +43,32 @@ public static class VEnvSetter
         {
             ReplaceCfg(cfgFile);
         }
-        //-----------------------------------------
+        //--------------------------------------
         // requirements.txt が無ければスキップ
-        //-----------------------------------------
+        //--------------------------------------
         string libList = $"{dir}/requirements.txt";
         if (!File.Exists(libList))
         {
             Debug.LogWarning($"{libList} が無いのでインストールをスキップ");
             return;
         }
-        //-----------------------------------------
+        //--------------------------------------
         // venv 内 python のフルパスを組み立て
-        //-----------------------------------------
+        //--------------------------------------
         string venvPy = $"{venvDir}/Scripts/python.exe";
         if (!File.Exists(venvPy))
             throw new FileNotFoundException($"仮想環境の python.exe が見つからない: {venvPy}");
-        //-----------------------------------------
+        //--------------------------------------
         // 既に同一環境ならスキップ
-        //-----------------------------------------
+        //--------------------------------------
         if (await IsAlreadySatisfiedAsync(venvPy, libList, dir))
         {
             Debug.Log("requirements.txt と同一環境が既に構築済み。インストールをスキップ");
             return;
         }
-        //-----------------------------------------
+        //--------------------------------------
         // requirements.txt があれば全ライブラリインストール
-        //-----------------------------------------
+        //--------------------------------------
         Debug.Log("リストをもとに全ライブラリをインストール...");
         await PowerShellAPI.Command($"{venvPy} -m pip install -r requirements.txt", dir);
         Debug.Log($"VEnv セットアップ完了\n{dir}");
@@ -106,17 +106,17 @@ public static class VEnvSetter
         string NormalizePkg(string line) =>
             line.Replace(" ", "").Replace("\r", "").ToLowerInvariant();
 
-        //-----------------------------------------
+        //--------------------------------------
         // requirements.txt を整形
-        //-----------------------------------------
+        //--------------------------------------
         var required = File.ReadLines(reqPath)
                            .Select(l => l.Split('#')[0].Trim())       // コメント除去
                            .Where(l => !string.IsNullOrWhiteSpace(l)) // 空行除去
                            .Select(NormalizePkg)
                            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        //-----------------------------------------
+        //--------------------------------------
         // venv の現状を取得
-        //-----------------------------------------
+        //--------------------------------------
         // C:/Users/[ユーザ名] フォルダ
         string usersDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         await UniTask.WaitUntil(() => File.Exists($"{usersDir}/.pyenv/pyenv-win/versions/3.12.5/python.exe"));
@@ -126,9 +126,9 @@ public static class VEnvSetter
                               .Where(l => !string.IsNullOrWhiteSpace(l))
                               .Select(NormalizePkg)
                               .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        //-----------------------------------------
+        //--------------------------------------
         // 差分チェック
-        //-----------------------------------------
+        //--------------------------------------
         bool ok = required.IsSubsetOf(installed);
         if (!ok)
         {
