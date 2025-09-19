@@ -48,7 +48,7 @@ public class Test_PyLoop : MonoBehaviour
         inJO["Data1"] = "いいいいいいいいいい";
         PyFnc Test_Idle = await py.Idle("Test_Idle.py", processCount: 20);
 
-        await Delay.Second(7);
+        await Delay.Sec(7);
 
         a.TimerWhileEqualTo(true, 0.1f)
         .Subscribe(async _ =>
@@ -59,7 +59,7 @@ public class Test_PyLoop : MonoBehaviour
         // アイドリング関数は手動でクローズ
         Test_Idle.Close(5000);
 
-        await Delay.Second(5);
+        await Delay.Sec(5);
         a.Value = false;
         a.Dispose();
     }
@@ -87,7 +87,7 @@ public class Test_PyLoop : MonoBehaviour
         // アイドリング関数は手動でクローズ
         Test_Idle.Close(5000);
 
-        await Delay.Second(5);
+        await Delay.Sec(5);
         a.Value = false;
         a.Dispose();
     }

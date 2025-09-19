@@ -24,7 +24,7 @@ public class Test_PyAPI : MonoBehaviour
         for (int i = 0; i <= 10; i++)
         {
             Debug.Log(i);
-            await Delay.Second(1);
+            await Delay.Sec(1);
         }
     }
 
