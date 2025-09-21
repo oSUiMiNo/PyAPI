@@ -1,14 +1,15 @@
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
-using UnityEngine;
 using Cysharp.Threading.Tasks;
-using System.Threading;
-using System.IO;
+using Maku;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using UniRx;
+using System.IO;
 using System.Text;
-using Maku;
+using System.Threading;
+using UniRx;
+using UnityEngine;
+using static PlasticGui.WorkspaceWindow.Merge.MergeInProgress;
 
 
 public class PyAPIHandler : SingletonCompo<PyAPIHandler>
@@ -19,9 +20,10 @@ public class PyAPIHandler : SingletonCompo<PyAPIHandler>
 }
 
 
-//****************************************************************
-// PyFnc を生成して待機させたりアイドルさせる
-//****************************************************************
+
+///*******************************************************<summary>
+/// PyFnc を生成して待機させたりアイドルさせる
+///</summary>******************************************************
 public class PyAPI
 {
     //--------------------------------------
@@ -41,9 +43,6 @@ public class PyAPI
     static BoolReactiveProperty logActive = new BoolReactiveProperty(true);
 
 
-    ///==============================================<summary>
-    /// コンストラクタ
-    ///</summary>=============================================
     /// <param name="pyDir">ラップする .py ファイルのがある Dir</param>
     /// <param name="pyInterpFile">Python のインタプリタ</param>
     public PyAPI(string pyDir, string pyInterpFile = "")
@@ -52,6 +51,7 @@ public class PyAPI
         if (string.IsNullOrEmpty(pyInterpFile)) PyInterpFile = $"{pyDir}/.venv/Scripts/python.exe";
         else PyInterpFile = pyInterpFile;
     }
+
 
     ///==============================================<summary>
     /// 高速実行したい関数を作成してアイドリングさせる
@@ -69,6 +69,7 @@ public class PyAPI
         GC.Collect();
         return pyFnc;
     }
+
 
     ///==============================================<summary>
     /// １ショット実行する関数を作成して待機させる
@@ -89,6 +90,22 @@ public class PyAPI
         GC.Collect();
         return pyFnc;
     }
+
+
+    ///==============================================<summary>
+    /// 待機 -> ワンショット実行
+    ///</summary>=============================================
+    public async void Exe(string pyFileName, float timeout = 0)
+    {
+        PyFnc fnc = await Wait(pyFileName, timeout);
+        await fnc.Exe();
+    }
+    public async void Exe(string pyFileName, JObject inJO, float timeout = 0, bool largeInput = false)
+    {
+        PyFnc fnc = await Wait(pyFileName, inJO, timeout, largeInput);
+        await fnc.Exe();
+    }
+
 
     ///==============================================<summary>
     /// ログの [ 読み取り -> 出力 ] 設定
@@ -114,6 +131,7 @@ public class PyAPI
         }).AddTo(PyAPIHandler.Compo);
     }
 
+
     ///==============================================<summary>
     /// 
     ///</summary>=============================================
@@ -130,11 +148,13 @@ public class PyAPI
 }
 
 
-//****************************************************************
-// Python プロセスのラッパ
-// 1つの .py ファイルにつき (場合により) 複数のプロセスを作成し
-// それらを1つの関数 (PyFnc インスタンス) としてラップ
-//****************************************************************
+
+
+///*******************************************************<summary>
+/// Python プロセスのラッパ
+/// 1つの .py ファイルにつき (場合により) 複数のプロセスを作成し
+/// それらを1つの関数 (PyFnc インスタンス) としてラップ
+///</summary>******************************************************
 public class PyFnc
 {
     //--------------------------------------
@@ -168,6 +188,7 @@ public class PyFnc
     IObservable<long> OnRead => logActive.TimerWhileEqualTo(Output.isActive, 0.01f);
     BoolReactiveProperty logActive = new(true);
    
+
     ///==============================================<summary>
     /// アウトプットに戻り値が来たら流す
     ///</summary>=============================================
@@ -188,6 +209,7 @@ public class PyFnc
     .Where(JO => JO != null)
     .Where(JO => JO["Loaded"] == null);
 
+
     ///==============================================<summary>
     /// アウトプットにプロセスのロード完了通知が来たら流す
     ///</summary>=============================================
@@ -207,6 +229,7 @@ public class PyFnc
     })
     .Where(JO => JO != null)
     .Where(JO => JO["Loaded"] != null);
+
 
     ///==============================================<summary>
     /// PyFnc インスタンス作成
@@ -270,6 +293,7 @@ public class PyFnc
         return newFnc;
     }
 
+
     ///==============================================<summary>
     /// 全プロセスの7割以上がロード完了するまで待つ
     /// Create 内でawait すると何故か onOut が発火しない
@@ -297,6 +321,7 @@ public class PyFnc
         onOut.Dispose();
     }
 
+
     ///==============================================<summary>
     /// 存在している全 PyFnc 終了
     ///</summary>=============================================
@@ -308,6 +333,7 @@ public class PyFnc
         }
         IdolingFncs.Clear();
     }
+
 
     ///==============================================<summary>
     /// 本 PyFunc 終了
@@ -333,6 +359,7 @@ public class PyFnc
         await UniTask.SwitchToMainThread();
     }
 
+
     ///==============================================<summary>
     /// 出力監視の設定
     ///</summary>=============================================
@@ -349,6 +376,7 @@ public class PyFnc
         }).AddTo(PyAPIHandler.Compo);
     }
 
+
     ///==============================================<summary>
     /// 1PyFncインスタンスで管理する全プロセスを起動
     ///</summary>=============================================
@@ -361,6 +389,7 @@ public class PyFnc
             await UniTask.SwitchToMainThread();
         }
     }
+
 
     ///==============================================<summary>
     /// Idle 中の関数を実行
@@ -390,8 +419,8 @@ public class PyFnc
         children[currentChildIndex].Exe(inJO);
         if (currentChildIndex == children.Count - 1) currentChildIndex = 0;
         else currentChildIndex++;
-        //GC.Collect();
     }
+
 
     ///==============================================<summary>
     /// Wait 中の関数を実行
@@ -416,6 +445,7 @@ public class PyFnc
 
         return outJO;
     }
+
     public async void ExeBG()
     {
         try
