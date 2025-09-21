@@ -95,12 +95,12 @@ public class PyAPI
     ///==============================================<summary>
     /// 待機 -> ワンショット実行
     ///</summary>=============================================
-    public async void Exe(string pyFileName, float timeout = 0)
+    public async UniTask Exe(string pyFileName, float timeout = 0)
     {
         PyFnc fnc = await Wait(pyFileName, timeout);
         await fnc.Exe();
     }
-    public async void Exe(string pyFileName, JObject inJO, float timeout = 0, bool largeInput = false)
+    public async UniTask Exe(string pyFileName, JObject inJO, float timeout = 0, bool largeInput = false)
     {
         PyFnc fnc = await Wait(pyFileName, inJO, timeout, largeInput);
         await fnc.Exe();
