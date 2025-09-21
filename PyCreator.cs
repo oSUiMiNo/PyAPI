@@ -11,7 +11,7 @@ public class PyCreator : Editor
     static string PyAssetsDir = "Assets/StreamingAssets/Py"; // AssetDatabase用のパス
 
 
-    [MenuItem("Assets/Create/Python Script", false, 1)] // 優先順位10
+    [MenuItem("Assets/Create/Python Script", false, 10)] // 優先順位10
     public static void CreateNewPythonScript()
     {
         // フォルダが存在しない場合は作成
