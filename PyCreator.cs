@@ -30,7 +30,7 @@ public class PyCreator : Editor
         int count = 1;
         while (File.Exists(filePath))
         {
-            fileName = $"NewPythonScript_{count}.py";
+            fileName = $"_{count}.py";
             filePath = Path.Combine(Dir, fileName);
             assetFilePath = Path.Combine(PyAssetsDir, fileName); // AssetDatabase—p‚ÌƒpƒX
             count++;
