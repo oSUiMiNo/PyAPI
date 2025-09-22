@@ -41,10 +41,10 @@ public static class VEnvSetter
                 Directory.Delete(venvDir);
                 await PowerShellAPI.Command("pyenv exec python -m venv .venv", dir);
             }
-            else
-            {
-                ReplaceCfg(cfgFile);
-            }
+            //else
+            //{
+            //    ReplaceCfg(cfgFile);
+            //}
             //--------------------------------------
             // requirements.txt が無ければスキップ
             //--------------------------------------
@@ -136,7 +136,7 @@ public static class VEnvSetter
         if (!ok)
         {
             var missing = required.Except(installed);
-            Debug.Log($"未インストールのパッケージ: {string.Join(", ", missing)}");
+            Debug.Log($"未インストールのパッケージ：{string.Join(",\n", missing)}");
         }
         return ok;
     }
