@@ -15,63 +15,66 @@ public static class VEnvSetter
     /// - dir に pyenv local が既に設定済み
     /// - dir に requirements.txt がある
     ///</summary>=============================================
-    public static async UniTask ExeFlow(string dir)
+    public static async UniTask Exe(string dir)
     {
-        Debug.Log($"VEnv セットアップ開始...\n{dir}");
-        //--------------------------------------
-        // .venv が無ければ作成
-        //--------------------------------------
-        string venvDir = $"{dir}/.venv";
-        if (!Directory.Exists(venvDir))
+        try
         {
-            Debug.Log($".venv が無いので生成...");
-            // 環境変数を気にせず pyenv 経由で python を起動してコマンドを実行
-            await PowerShellAPI.Command("pyenv exec python -m venv .venv", dir);
+            Debug.Log($"VEnv セットアップ開始...\n{dir}");
+            //--------------------------------------
+            // .venv が無ければ作成
+            //--------------------------------------
+            string venvDir = $"{dir}/.venv";
+            if (!Directory.Exists(venvDir))
+            {
+                Debug.Log($".venv が無いので生成...");
+                // 環境変数を気にせず pyenv 経由で python を起動してコマンドを実行
+                await PowerShellAPI.Command("pyenv exec python -m venv .venv", dir);
+            }
+            //--------------------------------------
+            // pyenv.cfg ファイルの home パスを自分のPCに置き換える
+            //--------------------------------------
+            string cfgFile = $"{venvDir}/pyvenv.cfg";
+            // pyenv.cfg ファイルが無ければ .venv 削除して再設定
+            if (!File.Exists(cfgFile))
+            {
+                Debug.Log($"pyenv.cfg ファイルが無いので .venv リセット");
+                Directory.Delete(venvDir);
+                await PowerShellAPI.Command("pyenv exec python -m venv .venv", dir);
+            }
+            else
+            {
+                ReplaceCfg(cfgFile);
+            }
+            //--------------------------------------
+            // requirements.txt が無ければスキップ
+            //--------------------------------------
+            string libList = $"{dir}/requirements.txt";
+            if (!File.Exists(libList))
+            {
+                throw new Exception($"{libList} が無いのでインストールをスキップ");
+            }
+            //--------------------------------------
+            // venv 内 python のフルパスを組み立て
+            //--------------------------------------
+            string venvPy = $"{venvDir}/Scripts/python.exe";
+            if (!File.Exists(venvPy))
+                throw new FileNotFoundException($"仮想環境の python.exe が見つからない: {venvPy}");
+            //--------------------------------------
+            // 既に同一環境ならスキップ
+            //--------------------------------------
+            if (await IsAlreadySatisfiedAsync(venvPy, libList, dir))
+            {
+                Debug.Log("requirements.txt と同一環境が既に構築済み。インストールをスキップ");
+                return;
+            }
+            //--------------------------------------
+            // requirements.txt があれば全ライブラリインストール
+            //--------------------------------------
+            Debug.Log("リストをもとに全ライブラリをインストール...");
+            await PowerShellAPI.Command($"{venvPy} -m pip install -r requirements.txt", dir);
+            Debug.Log($"VEnv セットアップ完了\n{dir}");
         }
-        //--------------------------------------
-        // pyenv.cfg ファイルの home パスを自分のPCに置き換える
-        //--------------------------------------
-        string cfgFile = $"{venvDir}/pyvenv.cfg";
-        // pyenv.cfg ファイルが無ければ .venv 削除して再設定
-        if (!File.Exists(cfgFile))
-        {
-            Debug.Log($"pyenv.cfg ファイルが無いので .venv リセット");
-            Directory.Delete(venvDir);
-            await PowerShellAPI.Command("pyenv exec python -m venv .venv", dir);
-        }
-        else
-        {
-            ReplaceCfg(cfgFile);
-        }
-        //--------------------------------------
-        // requirements.txt が無ければスキップ
-        //--------------------------------------
-        string libList = $"{dir}/requirements.txt";
-        if (!File.Exists(libList))
-        {
-            Debug.LogWarning($"{libList} が無いのでインストールをスキップ");
-            return;
-        }
-        //--------------------------------------
-        // venv 内 python のフルパスを組み立て
-        //--------------------------------------
-        string venvPy = $"{venvDir}/Scripts/python.exe";
-        if (!File.Exists(venvPy))
-            throw new FileNotFoundException($"仮想環境の python.exe が見つからない: {venvPy}");
-        //--------------------------------------
-        // 既に同一環境ならスキップ
-        //--------------------------------------
-        if (await IsAlreadySatisfiedAsync(venvPy, libList, dir))
-        {
-            Debug.Log("requirements.txt と同一環境が既に構築済み。インストールをスキップ");
-            return;
-        }
-        //--------------------------------------
-        // requirements.txt があれば全ライブラリインストール
-        //--------------------------------------
-        Debug.Log("リストをもとに全ライブラリをインストール...");
-        await PowerShellAPI.Command($"{venvPy} -m pip install -r requirements.txt", dir);
-        Debug.Log($"VEnv セットアップ完了\n{dir}");
+        catch { throw; }
     }
 
 

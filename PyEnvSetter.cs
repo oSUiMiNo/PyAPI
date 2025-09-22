@@ -13,7 +13,7 @@ public class PyEnvSetter
     ///==============================================<summary>
     /// 指定フォルダに pyenv local バージョンを設定するフロー
     ///</summary>=============================================
-    public static async UniTask ExeFlow(string dir, string ver)
+    public static async UniTask Exe(string dir, string ver)
     {
         try
         {
