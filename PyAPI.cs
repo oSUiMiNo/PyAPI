@@ -242,6 +242,7 @@ public class PyFnc
     ///</summary>=============================================
     public static async UniTask<PyFnc> Create(string pyInterpFile, string pyFile, JObject inJO = null, int processCount = 1, int threadCount = 1, float timeout = 0, bool largeInput = false)
     {
+        if(largeInput) Debug.Log($"サイズの大きい入力");
         try
         {
             await UniTask.SwitchToThreadPool();
@@ -251,7 +252,6 @@ public class PyFnc
             newFnc.FncName = Path.GetFileName(pyFile);
             newFnc.Timeout = timeout;
 
-            Debug.Log($"サイズの大きいインプット {largeInput}");
             string inPath = "";
             if (largeInput == true)
             {
