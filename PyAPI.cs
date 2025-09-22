@@ -58,16 +58,20 @@ public class PyAPI
     ///</summary>=============================================
     public async UniTask<PyFnc> Idle(string pyFileName, int processCount = 1, int threadCount = 1)
     {
-        // Pythonファイルパス
-        string pyFile = @$"{PyDir}\{pyFileName}";
-        if (!File.Exists(PyInterpFile)) Debug.LogError($"次の実行ファイルは無い{PyInterpFile}");
-        if (!File.Exists(pyFile)) Debug.LogError($"次のPyファイルは無い{pyFile}");
-        PyFnc pyFnc;
-        if (processCount <= 1) pyFnc = await PyFnc.Create(PyInterpFile, pyFile);
-        else pyFnc = await PyFnc.Create(PyInterpFile, pyFile, processCount: processCount, threadCount: threadCount);
-        pyFnc.Start();
-        GC.Collect();
-        return pyFnc;
+        try
+        {
+            // Pythonファイルパス
+            string pyFile = @$"{PyDir}\{pyFileName}";
+            if (!File.Exists(PyInterpFile)) throw new Exception($"次の実行ファイルは無い{PyInterpFile}");
+            if (!File.Exists(pyFile)) throw new Exception($"次のPyファイルは無い{pyFile}");
+            PyFnc pyFnc;
+            if (processCount <= 1) pyFnc = await PyFnc.Create(PyInterpFile, pyFile);
+            else pyFnc = await PyFnc.Create(PyInterpFile, pyFile, processCount: processCount, threadCount: threadCount);
+            pyFnc.Start();
+            GC.Collect();
+            return pyFnc;
+        }
+        catch (Exception e) { throw e; }
     }
 
 
@@ -80,15 +84,19 @@ public class PyAPI
     }
     public async UniTask<PyFnc> Wait(string pyFileName, JObject inJO, float timeout = 0, bool largeInput = false)
     {
-        // Pythonファイルパス
-        string pyFile = @$"{PyDir}\{pyFileName}";
-        if (!File.Exists(PyInterpFile)) Debug.LogError($"次の実行ファイルは無い{PyInterpFile}");
-        if (!File.Exists(pyFile)) Debug.LogError($"次のPyファイルは無い{pyFile}");
-        //// ["] を [\""] にエスケープしたJson
-        //string sendData = JsonConvert.SerializeObject(inJO).Replace("\"", "\\\"\"");
-        PyFnc pyFnc = await PyFnc.Create(PyInterpFile, pyFile, inJO, largeInput: largeInput);
-        GC.Collect();
-        return pyFnc;
+        try
+        {
+            // Pythonファイルパス
+            string pyFile = @$"{PyDir}\{pyFileName}";
+            if (!File.Exists(PyInterpFile)) throw new Exception($"次の実行ファイルは無い{PyInterpFile}");
+            if (!File.Exists(pyFile)) throw new Exception($"次のPyファイルは無い{pyFile}");
+            //// ["] を [\""] にエスケープしたJson
+            //string sendData = JsonConvert.SerializeObject(inJO).Replace("\"", "\\\"\"");
+            PyFnc pyFnc = await PyFnc.Create(PyInterpFile, pyFile, inJO, largeInput: largeInput);
+            GC.Collect();
+            return pyFnc;
+        }
+        catch (Exception e) { throw e; }
     }
 
 
@@ -199,11 +207,10 @@ public class PyFnc
         {
             return JObject.Parse(msg);
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
             // エラー処理 (必要に応じて)
-            Debug.LogError($"JSONパースエラー: {ex.Message}");
-            return null;
+            throw new Exception($"JSONパースエラー: {e.Message}");
         }
     })
     .Where(JO => JO != null)
@@ -223,8 +230,7 @@ public class PyFnc
         catch (Exception ex)
         {
             // エラー処理 (必要に応じて)
-            Debug.LogError($"JSONパースエラー: {ex.Message}");
-            return null;
+            throw new Exception($"JSONパースエラー: {e.Message}");
         }
     })
     .Where(JO => JO != null)
@@ -236,61 +242,65 @@ public class PyFnc
     ///</summary>=============================================
     public static async UniTask<PyFnc> Create(string pyInterpFile, string pyFile, JObject inJO = null, int processCount = 1, int threadCount = 1, float timeout = 0, bool largeInput = false)
     {
-        await UniTask.SwitchToThreadPool();
-        var newFnc = new PyFnc();
-        IdolingFncs.Add(newFnc);
-
-        newFnc.FncName = Path.GetFileName(pyFile);
-        newFnc.Timeout = timeout;
-
-        Debug.Log($"ラージインプット {largeInput}");
-        string inPath = "";
-        if (largeInput == true)
+        try
         {
-            inPath = $"{Path.GetDirectoryName(pyFile)}/LargeInput{InPathNum}.txt";
-            InPathNum++;
-            if (InPathNum > 50000) InPathNum = 0;
-            // ファイルが存在する場合は上書き
-            StreamWriter writer = new StreamWriter(inPath, false);
-            writer.WriteLine(JsonConvert.SerializeObject(inJO));//.Replace("\"", "\\\"\"")); // 書き込むテキスト
-            writer.Close();
-            inJO = null;
-            Debug.Log($"書き込み完了");
-        }
-        if (inJO == null) inJO = new JObject();
-        inJO["ThreadCount"] = threadCount;
-        inJO["LargeInput"] = largeInput;
-        inJO["InPath"] = inPath;
+            await UniTask.SwitchToThreadPool();
+            var newFnc = new PyFnc();
+            IdolingFncs.Add(newFnc);
 
-        // ["] を [\""] にエスケープしたJson
-        string sendData = JsonConvert.SerializeObject(inJO).Replace("\"", "\\\"\"");
+            newFnc.FncName = Path.GetFileName(pyFile);
+            newFnc.Timeout = timeout;
 
-        string log = $"PyFnc起動:{newFnc.FncName} - プロセス: ";
-        if (processCount <= 0) processCount = 1;
-        for (int i = 0; i < processCount; i++)
-        {
-            newFnc.children.Add(new System.Diagnostics.Process
+            Debug.Log($"ラージインプット {largeInput}");
+            string inPath = "";
+            if (largeInput == true)
             {
-                StartInfo = new System.Diagnostics.ProcessStartInfo(pyInterpFile)
+                inPath = $"{Path.GetDirectoryName(pyFile)}/LargeInput{InPathNum}.txt";
+                InPathNum++;
+                if (InPathNum > 50000) InPathNum = 0;
+                // ファイルが存在する場合は上書き
+                StreamWriter writer = new StreamWriter(inPath, false);
+                writer.WriteLine(JsonConvert.SerializeObject(inJO));//.Replace("\"", "\\\"\"")); // 書き込むテキスト
+                writer.Close();
+                inJO = null;
+                Debug.Log($"書き込み完了");
+            }
+            if (inJO == null) inJO = new JObject();
+            inJO["ThreadCount"] = threadCount;
+            inJO["LargeInput"] = largeInput;
+            inJO["InPath"] = inPath;
+
+            // ["] を [\""] にエスケープしたJson
+            string sendData = JsonConvert.SerializeObject(inJO).Replace("\"", "\\\"\"");
+
+            string log = $"PyFnc起動:{newFnc.FncName} - プロセス: ";
+            if (processCount <= 0) processCount = 1;
+            for (int i = 0; i < processCount; i++)
+            {
+                newFnc.children.Add(new System.Diagnostics.Process
                 {
-                    Arguments = $"{pyFile} {sendData}",
-                    UseShellExecute = false, // シェルを使用しない
-                    RedirectStandardOutput = true, // 標準出力をリダイレクト
-                    RedirectStandardInput = true, // 標準入力をリダイレクト
-                    RedirectStandardError = true, // 標準エラーをリダイレクト
-                    CreateNoWindow = true, // PowerShellウィンドウを表示しない
-                }
-            });
-            log += $", {i.ToString()}";
+                    StartInfo = new System.Diagnostics.ProcessStartInfo(pyInterpFile)
+                    {
+                        Arguments = $"{pyFile} {sendData}",
+                        UseShellExecute = false, // シェルを使用しない
+                        RedirectStandardOutput = true, // 標準出力をリダイレクト
+                        RedirectStandardInput = true, // 標準入力をリダイレクト
+                        RedirectStandardError = true, // 標準エラーをリダイレクト
+                        CreateNoWindow = true, // PowerShellウィンドウを表示しない
+                    }
+                });
+                log += $", {i.ToString()}";
+            }
+            log += $"\n各スレッド数: {threadCount}";
+            Debug.Log(log);
+            await UniTask.Delay(1);
+            newFnc.InitLog(pyFile);
+            // Create 内でawait すると何故か onOut が発火しない
+            //await newFnc.WaitLoad(count);
+            await UniTask.SwitchToMainThread();
+            return newFnc;
         }
-        log += $"\n各スレッド数: {threadCount}";
-        Debug.Log(log);
-        await UniTask.Delay(1);
-        newFnc.InitLog(pyFile);
-        // Create 内でawait すると何故か onOut が発火しない
-        //await newFnc.WaitLoad(count);
-        await UniTask.SwitchToMainThread();
-        return newFnc;
+        catch (Exception e) { throw e; }
     }
 
 
@@ -300,25 +310,29 @@ public class PyFnc
     ///</summary>=============================================
     public async UniTask WaitLoad(int completionRate)
     {
-        if (completionRate < 1 || 10 < completionRate)
+        try
         {
-            Debug.LogError("completionRate は 1-10 の間で");
-            return;
+            if (completionRate < 1 || 10 < completionRate)
+            {
+                Debug.LogError("completionRate は 1-10 の間で");
+                return;
+            }
+            // AddTo の中身はGOかCompoなのでメインスレッドじゃないとだめ
+            bool ThreadIsMain = false;
+            if (Thread.CurrentThread.ManagedThreadId == 1) ThreadIsMain = true;
+            if (!ThreadIsMain) await UniTask.SwitchToMainThread();
+            int loadedCount = 0;
+            IDisposable onOut = OnLoad
+            .Subscribe(JO =>
+            {
+                loadedCount++;
+            }).AddTo(PyAPIHandler.Compo);
+            if (!ThreadIsMain) await UniTask.SwitchToThreadPool();
+            await UniTask.WaitUntil(() => loadedCount >= (int)(children.Count * 0.7));
+            Debug.Log($"{FncName}: {completionRate}0% のプロセスがロード完了".Magenta());
+            onOut.Dispose();
         }
-        // AddTo の中身はGOかCompoなのでメインスレッドじゃないとだめ
-        bool ThreadIsMain = false;
-        if (Thread.CurrentThread.ManagedThreadId == 1) ThreadIsMain = true;
-        if (!ThreadIsMain) await UniTask.SwitchToMainThread();
-        int loadedCount = 0;
-        IDisposable onOut = OnLoad
-        .Subscribe(JO =>
-        {
-            loadedCount++;
-        }).AddTo(PyAPIHandler.Compo);
-        if (!ThreadIsMain) await UniTask.SwitchToThreadPool();
-        await UniTask.WaitUntil(() => loadedCount >= (int)(children.Count * 0.7));
-        Debug.Log($"{FncName}: {completionRate}0% のプロセスがロード完了".Magenta());
-        onOut.Dispose();
+        catch (Exception e) { throw e; }
     }
 
 
@@ -396,23 +410,27 @@ public class PyFnc
     ///</summary>=============================================
     public async UniTask<JObject> Exe(JObject inJO)
     {
-        JObject outJO = null;
-
-        // AddTo の中身は GO か Compo なのでメインスレッドじゃないとだめ
-        bool ThreadIsMain = false;
-        if (Thread.CurrentThread.ManagedThreadId == 1) ThreadIsMain = true;
-        if (!ThreadIsMain) await UniTask.SwitchToMainThread();
-        IDisposable onOut = OnOut.Subscribe(JO =>
+        try
         {
-            outJO = JO;
-        }).AddTo(PyAPIHandler.Compo);
-        if (!ThreadIsMain) await UniTask.SwitchToThreadPool();
+            JObject outJO = null;
 
-        ExeBG(inJO);
-        await UniTask.WaitUntil(() => outJO != null);
-        onOut.Dispose();
+            // AddTo の中身は GO か Compo なのでメインスレッドじゃないとだめ
+            bool ThreadIsMain = false;
+            if (Thread.CurrentThread.ManagedThreadId == 1) ThreadIsMain = true;
+            if (!ThreadIsMain) await UniTask.SwitchToMainThread();
+            IDisposable onOut = OnOut.Subscribe(JO =>
+            {
+                outJO = JO;
+            }).AddTo(PyAPIHandler.Compo);
+            if (!ThreadIsMain) await UniTask.SwitchToThreadPool();
 
-        return outJO;
+            ExeBG(inJO);
+            await UniTask.WaitUntil(() => outJO != null);
+            onOut.Dispose();
+
+            return outJO;
+        }
+        catch (Exception e) { throw e; }
     }
     public void ExeBG(JObject inJO)
     {
@@ -427,23 +445,27 @@ public class PyFnc
     ///</summary>=============================================
     public async UniTask<JObject> Exe()
     {
-        JObject outJO = null;
-
-        // AddTo の中身はGOかCompoなのでメインスレッドじゃないとだめ
-        bool ThreadIsMain = false;
-        if (Thread.CurrentThread.ManagedThreadId == 1) ThreadIsMain = true;
-        if (!ThreadIsMain) await UniTask.SwitchToMainThread();
-        IDisposable onOut = OnOut.Subscribe(JO =>
+        try
         {
-            outJO = JO;
-        }).AddTo(PyAPIHandler.Compo);
-        if (!ThreadIsMain) await UniTask.SwitchToThreadPool();
+            JObject outJO = null;
 
-        ExeBG();
-        await UniTask.WaitUntil(() => outJO != null);
-        onOut.Dispose();
+            // AddTo の中身はGOかCompoなのでメインスレッドじゃないとだめ
+            bool ThreadIsMain = false;
+            if (Thread.CurrentThread.ManagedThreadId == 1) ThreadIsMain = true;
+            if (!ThreadIsMain) await UniTask.SwitchToMainThread();
+            IDisposable onOut = OnOut.Subscribe(JO =>
+            {
+                outJO = JO;
+            }).AddTo(PyAPIHandler.Compo);
+            if (!ThreadIsMain) await UniTask.SwitchToThreadPool();
 
-        return outJO;
+            ExeBG();
+            await UniTask.WaitUntil(() => outJO != null);
+            onOut.Dispose();
+
+            return outJO;
+        }
+        catch (Exception e) { throw e; }
     }
 
     public async void ExeBG()
