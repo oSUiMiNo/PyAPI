@@ -251,7 +251,7 @@ public class PyFnc
             newFnc.FncName = Path.GetFileName(pyFile);
             newFnc.Timeout = timeout;
 
-            Debug.Log($"ラージインプット {largeInput}");
+            Debug.Log($"サイズの大きいインプット {largeInput}");
             string inPath = "";
             if (largeInput == true)
             {
