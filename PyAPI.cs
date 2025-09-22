@@ -227,7 +227,7 @@ public class PyFnc
         {
             return JObject.Parse(msg);
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
             // エラー処理 (必要に応じて)
             throw new Exception($"JSONパースエラー: {e.Message}");
