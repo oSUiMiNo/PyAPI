@@ -2,7 +2,6 @@ using Cysharp.Threading.Tasks;
 using System;
 using System.IO;
 using System.Linq;
-using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 
@@ -31,7 +30,7 @@ public static class VEnvSetter
                 await PowerShellAPI.Command("pyenv exec python -m venv .venv", dir);
             }
             //--------------------------------------
-            // pyenv.cfg ファイルの home パスを自分のPCに置き換える
+            // pyenv.cfg ファイル確認
             //--------------------------------------
             string cfgFile = $"{venvDir}/pyvenv.cfg";
             // pyenv.cfg ファイルが無ければ .venv 削除して再設定
@@ -41,10 +40,6 @@ public static class VEnvSetter
                 Directory.Delete(venvDir);
                 await PowerShellAPI.Command("pyenv exec python -m venv .venv", dir);
             }
-            //else
-            //{
-            //    ReplaceCfg(cfgFile);
-            //}
             //--------------------------------------
             // requirements.txt が無ければスキップ
             //--------------------------------------
@@ -75,28 +70,6 @@ public static class VEnvSetter
             Debug.Log($"VEnv セットアップ完了\n{dir}");
         }
         catch { throw; }
-    }
-
-
-    ///==============================================<summary>
-    /// cfg ファイルの home の ユーザフォルダパス部分を各々の環境に置き換え
-    ///</summary>=============================================
-    static void ReplaceCfg(string cfgPath)
-    {
-        Debug.Log($"cfg ファイルのホームパス置き換え開始...");
-        string usersDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        // すべての行を読み込む
-        string[] lines = File.ReadAllLines(cfgPath);
-        for (int i = 0; i < lines.Length; i++)
-        {
-            if (lines[i].StartsWith("home ="))
-            {
-                lines[i] = @$"home = {usersDir}\.pyenv\pyenv-win\versions\3.12.5\python.exe";
-            }
-        }
-        // 上書き保存
-        File.WriteAllLines(cfgPath, lines);
-        Debug.Log($"cfg ファイルのホームパス置き換え完了");
     }
 
 
@@ -139,5 +112,27 @@ public static class VEnvSetter
             Debug.Log($"未インストールのパッケージ：{string.Join(",\n", missing)}");
         }
         return ok;
+    }
+
+
+    ///==============================================<summary>
+    /// cfg ファイルの home の ユーザフォルダパス部分を各々の環境に置き換え
+    ///</summary>=============================================
+    static void ReplaceCfg(string cfgPath)
+    {
+        Debug.Log($"cfg ファイルのホームパス置き換え開始...");
+        string usersDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        // すべての行を読み込む
+        string[] lines = File.ReadAllLines(cfgPath);
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].StartsWith("home ="))
+            {
+                lines[i] = @$"home = {usersDir}\.pyenv\pyenv-win\versions\3.12.5\python.exe";
+            }
+        }
+        // 上書き保存
+        File.WriteAllLines(cfgPath, lines);
+        Debug.Log($"cfg ファイルのホームパス置き換え完了");
     }
 }

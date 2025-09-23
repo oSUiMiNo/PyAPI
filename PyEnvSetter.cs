@@ -2,7 +2,6 @@ using Cysharp.Threading.Tasks;
 using System;
 using System.IO;
 using System.Linq;
-using System.Text;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -18,13 +17,13 @@ public class PyEnvSetter
         try
         {
             Debug.Log($"Pyenv セットアップ開始...\n{dir}");
-
             //--------------------------------------
             // pyenv のインストールが未だならインストール
             //--------------------------------------
             try
             {
                 await IsInstalled_PyEnv();
+                Debug.Log($"Python {ver} は既にインストールされている");
             }
             catch (Exception e)
             {
@@ -45,6 +44,7 @@ public class PyEnvSetter
             try
             {
                 await IsInstalled_PyVer(ver);
+                Debug.Log($"Python {ver} は既にインストールされている");
             }
             catch
             {
@@ -66,10 +66,6 @@ public class PyEnvSetter
             await SetLocalVer(dir, ver);
         }
         catch { throw; }
-        //{
-        //    //throw new Exception($"エラー: {e.Message}");
-        //    //Debug.LogError($"エラー: {e.Message}");
-        //}
         Debug.Log($"PyEnv セットアップ完了\n{dir}");
     }
 

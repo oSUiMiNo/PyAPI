@@ -1,9 +1,7 @@
-using Maku;
 using UnityEngine;
-using System;
 
 
-public class EnvSetter : MonoBehaviour
+public class Tset_EnvSetting : MonoBehaviour
 {
     async void Start()
     {
