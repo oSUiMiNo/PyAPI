@@ -46,20 +46,23 @@ public static class VEnvSetter
             string libList = $"{dir}/requirements.txt";
             if (!File.Exists(libList))
             {
-                throw new Exception($"{libList} が無いのでインストールをスキップ");
+                throw new($"{libList} が無いのでインストールをスキップ");
             }
             //--------------------------------------
             // venv 内 python のフルパスを組み立て
             //--------------------------------------
             string venvPy = $"{venvDir}/Scripts/python.exe";
             if (!File.Exists(venvPy))
-                throw new FileNotFoundException($"仮想環境の python.exe が見つからない: {venvPy}");
+            {
+                throw new($"仮想環境の python.exe が見つからない: {venvPy}");
+            }
             //--------------------------------------
             // 既に同一環境ならスキップ
             //--------------------------------------
             if (await IsAlreadySatisfiedAsync(venvPy, libList, dir))
             {
                 Debug.Log("requirements.txt と同一環境が既に構築済み。インストールをスキップ");
+                Debug.Log($"VEnv セットアップ完了！\n{dir}");
                 return;
             }
             //--------------------------------------
@@ -67,7 +70,7 @@ public static class VEnvSetter
             //--------------------------------------
             Debug.Log("リストをもとに全ライブラリをインストール...");
             await PowerShellAPI.Command($"{venvPy} -m pip install -r requirements.txt", dir);
-            Debug.Log($"VEnv セットアップ完了\n{dir}");
+            Debug.Log($"VEnv セットアップ完了！\n{dir}");
         }
         catch { throw; }
     }
@@ -133,6 +136,6 @@ public static class VEnvSetter
         }
         // 上書き保存
         File.WriteAllLines(cfgPath, lines);
-        Debug.Log($"cfg ファイルのホームパス置き換え完了");
+        Debug.Log($"cfg ファイルのホームパス置き換え完了！");
     }
 }

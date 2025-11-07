@@ -66,7 +66,7 @@ public class PyEnvSetter
             await SetLocalVer(dir, ver);
         }
         catch { throw; }
-        Debug.Log($"PyEnv セットアップ完了\n{dir}");
+        Debug.Log($"PyEnv セットアップ完了！\n{dir}");
     }
 
 
@@ -77,7 +77,7 @@ public class PyEnvSetter
     {
         Debug.Log($"pyenv バージョン確認開始...");
         string version = await PowerShellAPI.Command("pyenv --version");
-        Debug.Log($"pyenv バージョン確認完了\n{version}");
+        Debug.Log($"pyenv バージョン確認完了！\n{version}");
     }
 
 
@@ -120,7 +120,7 @@ public class PyEnvSetter
             usersDir
         );
 
-        Debug.Log($"pyenv インストール完了\n{result}");
+        Debug.Log($"pyenv インストール完了！\n{result}");
 
         // インストール直後に現在プロセスの PATH を更新
         RefreshPathForCurrentProcess();
@@ -150,7 +150,7 @@ public class PyEnvSetter
 
         var updated = string.Join(";", paths);
         Environment.SetEnvironmentVariable("PATH", updated, EnvironmentVariableTarget.Process);
-        Debug.Log($"PATH 更新完了");
+        Debug.Log($"PATH 更新完了！");
     }
 
 
@@ -162,7 +162,7 @@ public class PyEnvSetter
         Debug.Log($"pyenv インストール済 Python バージョン確認開始...");
         string result = await PowerShellAPI.Command("pyenv versions");
         if (!result.Contains(ver)) throw new Exception();
-        Debug.Log($"pyenv インストール済 Python バージョン確認完了\n一覧：\n {result}");
+        Debug.Log($"pyenv インストール済 Python バージョン確認完了！\n一覧：\n {result}");
     }
 
 
@@ -173,7 +173,7 @@ public class PyEnvSetter
     {
         Debug.Log($"Python {ver} インストール開始...");
         string result = await PowerShellAPI.Command($"pyenv install {ver}");
-        Debug.Log($"Python {ver} インストール完了\n{result}");
+        Debug.Log($"Python {ver} インストール完了！\n{result}");
     }
 
 
@@ -184,7 +184,7 @@ public class PyEnvSetter
     {
         Debug.Log($"pyenv local を {ver} に設定開始...\nディレクトリ：{dir}");
         string result = await PowerShellAPI.Command($"pyenv local {ver}", dir);
-        Debug.Log($"pyenv local を {ver} に設定完了\n{result}");
+        Debug.Log($"pyenv local を {ver} に設定完了！\n{result}");
 
         //--------------------------------------
         // .python-versionファイルが作成されたか確認
