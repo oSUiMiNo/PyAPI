@@ -1,4 +1,4 @@
-ï»¿# if UNITY_EDITOR
+# if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
 
@@ -12,7 +12,7 @@ public class MyEditorInitializer
     {
         //if (!EditorPrefs.GetBool("MyEditorInitializer_Initialized", false))
         //{
-        //    Debug.Log("MyEditorInitializerãŒåˆæœŸåŒ–ã•ã‚Œã¾ã—ãŸã€‚");
+        //    Debug.Log("MyEditorInitializer‚ª‰Šú‰»‚³‚ê‚Ü‚µ‚½B");
 
         //    EditorApplication.delayCall += OnEditorStartup;
 
@@ -22,9 +22,9 @@ public class MyEditorInitializer
 
     static void OnEditorStartup()
     {
-        Debug.Log("Editorèµ·å‹•å¾Œã®å‡¦ç†ã‚’å®Ÿè¡Œ");
-        string savedValue = EditorPrefs.GetString("MySavedValue", "ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆå€¤");
-        Debug.Log("ä¿å­˜ã•ã‚ŒãŸå€¤ï¼š" + savedValue);
+        Debug.Log("Editor‹N“®Œã‚Ìˆ—‚ğÀs");
+        string savedValue = EditorPrefs.GetString("MySavedValue", "ƒfƒtƒHƒ‹ƒg’l");
+        Debug.Log("•Û‘¶‚³‚ê‚½’lF" + savedValue);
     }
 }
 #endif

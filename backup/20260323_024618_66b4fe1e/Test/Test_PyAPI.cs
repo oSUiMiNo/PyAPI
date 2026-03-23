@@ -1,4 +1,4 @@
-Ôªøusing Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
@@ -32,20 +32,20 @@ public class Test_PyAPI : MonoBehaviour
     {
         JObject inputJObj = new JObject();
 
-        // Ë¶ÅÁ¥†ËøΩÂä†
+        // óvëfí«â¡
         inputJObj["Power"] = true;
         inputJObj["Battery"] = 88;
         inputJObj["CPU"] = "Intel";
         inputJObj["Drives"] = new JArray("HDD", "SSD");
         Debug.Log(inputJObj);
 
-        // List„Å´Ë¶ÅÁ¥†ËøΩÂä†
+        // ListÇ…óvëfí«â¡
         JArray drivesArray = (JArray)inputJObj["Drives"];
         drivesArray.Add("USB");
         Debug.Log(inputJObj);
 
         //JObject outputJObj = await py.Exe("Test_PyAPI.py", inputJObj, 10);
-        //Debug.Log($"ÁµêÊûúÔºö{outputJObj}");
+        //Debug.Log($"åãâ ÅF{outputJObj}");
     }
 }
 

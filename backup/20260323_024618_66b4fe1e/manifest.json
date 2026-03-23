@@ -1,0 +1,79 @@
+{
+  "run_id": "20260323_024618_66b4fe1e",
+  "timestamp": "2026-03-23T02:46:18.461780",
+  "target_path": "C:\\Users\\osuim\\Dev\\Unity\\PyAPI\\Packages\\PyAPI",
+  "converted_files": [
+    {
+      "relative_path": "AutoCopyPythonAPI.cs",
+      "source_encoding": "cp932",
+      "backup_path": "20260323_024618_66b4fe1e/AutoCopyPythonAPI.cs"
+    },
+    {
+      "relative_path": "CommandUtil.cs",
+      "source_encoding": "cp932",
+      "backup_path": "20260323_024618_66b4fe1e/CommandUtil.cs"
+    },
+    {
+      "relative_path": "FileWatcher.cs",
+      "source_encoding": "cp932",
+      "backup_path": "20260323_024618_66b4fe1e/FileWatcher.cs"
+    },
+    {
+      "relative_path": "PyAPI.cs",
+      "source_encoding": "cp932",
+      "backup_path": "20260323_024618_66b4fe1e/PyAPI.cs"
+    },
+    {
+      "relative_path": "PyCreator.cs",
+      "source_encoding": "cp932",
+      "backup_path": "20260323_024618_66b4fe1e/PyCreator.cs"
+    },
+    {
+      "relative_path": "PyEnvSetter.cs",
+      "source_encoding": "cp932",
+      "backup_path": "20260323_024618_66b4fe1e/PyEnvSetter.cs"
+    },
+    {
+      "relative_path": "SharedLog.cs",
+      "source_encoding": "cp932",
+      "backup_path": "20260323_024618_66b4fe1e/SharedLog.cs"
+    },
+    {
+      "relative_path": "VEnvSetter.cs",
+      "source_encoding": "cp932",
+      "backup_path": "20260323_024618_66b4fe1e/VEnvSetter.cs"
+    },
+    {
+      "relative_path": "PS/PowerShellAPI.cs",
+      "source_encoding": "cp932",
+      "backup_path": "20260323_024618_66b4fe1e/PS/PowerShellAPI.cs"
+    },
+    {
+      "relative_path": "Test/CancelTest.cs",
+      "source_encoding": "cp932",
+      "backup_path": "20260323_024618_66b4fe1e/Test/CancelTest.cs"
+    },
+    {
+      "relative_path": "Test/MyEditorInitializer.cs",
+      "source_encoding": "cp932",
+      "backup_path": "20260323_024618_66b4fe1e/Test/MyEditorInitializer.cs"
+    },
+    {
+      "relative_path": "Test/Test_PyAPI.cs",
+      "source_encoding": "cp932",
+      "backup_path": "20260323_024618_66b4fe1e/Test/Test_PyAPI.cs"
+    },
+    {
+      "relative_path": "Test/Test_PyLoop.cs",
+      "source_encoding": "cp932",
+      "backup_path": "20260323_024618_66b4fe1e/Test/Test_PyLoop.cs"
+    }
+  ],
+  "config": {
+    "extensions": [
+      ".cs"
+    ],
+    "include_utf8_no_bom": false,
+    "exclude_patterns": []
+  }
+}
