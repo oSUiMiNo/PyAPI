@@ -1,10 +1,11 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Maku;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using UniRx;
@@ -16,7 +17,7 @@ public class PyAPIHandler : SingletonCompo<PyAPIHandler>
 {
     protected sealed override void Awake0() => PyAPI.InitLog();
     private void OnApplicationQuit() => PyAPI.Close();
-    private void OnDestroy() => PyAPI.Close(); // パッケージインポート先で実行されてない
+    private void OnDestroy() => PyAPI.Close();
 }
 
 
@@ -31,16 +32,6 @@ public class PyAPI
     //--------------------------------------
     public string PyInterpFile { get; }
     public string PyDir { get; }
-
-    //--------------------------------------
-    // スタティック-ローカル
-    //--------------------------------------
-    static string LogPath => $"{Application.dataPath}/PyLog.txt";
-    // Python ログ表示用インスタンス
-    static SharedLog Log = new SharedLog(LogPath);
-    // シェアログ読み取りタイミングのハンドラ
-    static IObservable<long> OnRead => logActive.UpdateWhileEqualTo(Log.isActive, 0.05f);
-    static BoolReactiveProperty logActive = new BoolReactiveProperty(true);
 
 
     /// <param name="pyDir">ラップする .py ファイルのがある Dir</param>
@@ -60,7 +51,6 @@ public class PyAPI
     {
         try
         {
-            // Pythonファイルパス
             string pyFile = @$"{PyDir}\{pyFileName}";
             if (!File.Exists(PyInterpFile)) throw new Exception($"次の実行ファイルは無い{PyInterpFile}");
             if (!File.Exists(pyFile)) throw new Exception($"次のPyファイルは無い{pyFile}");
@@ -86,12 +76,9 @@ public class PyAPI
     {
         try
         {
-            // Pythonファイルパス
             string pyFile = @$"{PyDir}\{pyFileName}";
             if (!File.Exists(PyInterpFile)) throw new Exception($"次の実行ファイルは無い{PyInterpFile}");
             if (!File.Exists(pyFile)) throw new Exception($"次のPyファイルは無い{pyFile}");
-            //// ["] を [\""] にエスケープしたJson
-            //string sendData = JsonConvert.SerializeObject(inJO).Replace("\"", "\\\"\"");
             PyFnc pyFnc = await PyFnc.Create(PyInterpFile, pyFile, inJO, largeInput: largeInput);
             GC.Collect();
             return pyFnc;
@@ -116,41 +103,22 @@ public class PyAPI
 
 
     ///==============================================<summary>
-    /// ログの [ 読み取り -> 出力 ] 設定
+    /// 初期化（PyAPIHandler.Awake0 から呼ばれる）
     ///</summary>=============================================
     public static void InitLog()
     {
-        //--------------------------------------
-        // 定期的にログの読み取り実行
-        //--------------------------------------
-        OnRead.Subscribe(_ =>
-        {
-            if (!File.Exists(LogPath)) return; // なんかオペレータをすり抜けるのでブロックしとく
-            //Debug.Log($"ログ {File.Exists(LogPath)}");
-            Log.ReadLogFile();
-        }).AddTo(PyAPIHandler.Compo);
-
-        //--------------------------------------
-        // ログが追加されたら表示
-        //--------------------------------------
-        Log.OnLog.Subscribe(msg =>
-        {
-            Debug.Log(msg.HexColor("#90E3C4"));
-        }).AddTo(PyAPIHandler.Compo);
+        // TCP 方式ではグローバルログファイル不要
+        // ログは各 PyFnc の TcpBridge 経由で受信する
     }
 
 
     ///==============================================<summary>
-    /// 
+    /// 全体終了
     ///</summary>=============================================
     public static async void Close()
     {
-        // 終了時はは待ち時間0じゃないとパッケージ利用先で実行されない
         PyFnc.CloseAll(0);
-        logActive.Dispose();
-        // 終了後に待ちたいのでここはDelay.Secondではだめ
         await UniTask.Delay(1);
-        Log.Close();
         Debug.Log("PyAPI クローズ完了");
     }
 }
@@ -168,73 +136,51 @@ public class PyFnc
     //--------------------------------------
     // スタティック-ローカル
     //--------------------------------------
-    // アイドル中の PyFnc インスタンス管理
     static List<PyFnc> IdolingFncs = new();
-    // 引数を渡すファイルを1Fncにつき複数使う
     static int InPathNum = 0;
     //--------------------------------------
     // パブリック
     //--------------------------------------
-    // .py ファイル名を Fnc 名とする
     public string FncName { get; private set; }
-    // 戻り値が書き込まれるファイル
-    public string OutPath { get; private set; }
     //--------------------------------------
     // プライベート
     //--------------------------------------
-    // 子プロセス管理
     List<System.Diagnostics.Process> children = new();
-    // 子プロセスのインデックス
     int currentChildIndex = 0;
-    // タイムアウト時間
     float Timeout = 0;
-    // 実行キャンセル用トークン
     CancellationTokenSource cts = new();
-    // アウトプット監視用
-    SharedLog Output;
-    // アウトプット読み取りタイミングのハンドラ
-    IObservable<long> OnRead => logActive.TimerWhileEqualTo(Output.isActive, 0.01f);
-    BoolReactiveProperty logActive = new(true);
-   
+    //--------------------------------------
+    // TCP 通信
+    //--------------------------------------
+    List<TcpBridge> bridges = new();
+    Subject<string> mergedMessages = new();
+
 
     ///==============================================<summary>
     /// アウトプットに戻り値が来たら流す
     ///</summary>=============================================
-    public IObservable<JObject> OnOut => Output.OnLog
+    public IObservable<JObject> OnOut => mergedMessages
     .Select(msg =>
     {
-        try
-        {
-            return JObject.Parse(msg);
-        }
-        catch (Exception e)
-        {
-            // エラー処理 (必要に応じて)
-            throw new Exception($"JSONパースエラー: {e.Message}");
-        }
+        try { return JObject.Parse(msg); }
+        catch (Exception e) { throw new Exception($"JSONパースエラー: {e.Message}"); }
     })
     .Where(JO => JO != null)
-    .Where(JO => JO["Loaded"] == null);
+    .Where(JO => (string)JO["_type"] == "out")
+    .Select(JO => { JO.Remove("_type"); return JO; });
 
 
     ///==============================================<summary>
     /// アウトプットにプロセスのロード完了通知が来たら流す
     ///</summary>=============================================
-    public IObservable<JObject> OnLoad => Output.OnLog
+    public IObservable<JObject> OnLoad => mergedMessages
     .Select(msg =>
     {
-        try
-        {
-            return JObject.Parse(msg);
-        }
-        catch (Exception e)
-        {
-            // エラー処理 (必要に応じて)
-            throw new Exception($"JSONパースエラー: {e.Message}");
-        }
+        try { return JObject.Parse(msg); }
+        catch (Exception e) { throw new Exception($"JSONパースエラー: {e.Message}"); }
     })
     .Where(JO => JO != null)
-    .Where(JO => JO["Loaded"] != null);
+    .Where(JO => (string)JO["_type"] == "loaded");
 
 
     ///==============================================<summary>
@@ -258,9 +204,8 @@ public class PyFnc
                 inPath = $"{Path.GetDirectoryName(pyFile)}/LargeInput{InPathNum}.txt";
                 InPathNum++;
                 if (InPathNum > 50000) InPathNum = 0;
-                // ファイルが存在する場合は上書き
                 StreamWriter writer = new StreamWriter(inPath, false);
-                writer.WriteLine(JsonConvert.SerializeObject(inJO));//.Replace("\"", "\\\"\"")); // 書き込むテキスト
+                writer.WriteLine(JsonConvert.SerializeObject(inJO));
                 writer.Close();
                 inJO = null;
                 Debug.Log($"書き込み完了");
@@ -270,7 +215,6 @@ public class PyFnc
             inJO["LargeInput"] = largeInput;
             inJO["InPath"] = inPath;
 
-            // ["] を [\""] にエスケープしたJson
             string sendData = JsonConvert.SerializeObject(inJO).Replace("\"", "\\\"\"");
 
             string log = $"PyFnc起動:{newFnc.FncName} - プロセス: ";
@@ -282,11 +226,11 @@ public class PyFnc
                     StartInfo = new System.Diagnostics.ProcessStartInfo(pyInterpFile)
                     {
                         Arguments = $"{pyFile} {sendData}",
-                        UseShellExecute = false, // シェルを使用しない
-                        RedirectStandardOutput = true, // 標準出力をリダイレクト
-                        RedirectStandardInput = true, // 標準入力をリダイレクト
-                        RedirectStandardError = true, // 標準エラーをリダイレクト
-                        CreateNoWindow = true, // PowerShellウィンドウを表示しない
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardInput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true,
                     }
                 });
                 log += $", {i.ToString()}";
@@ -294,10 +238,22 @@ public class PyFnc
             log += $"\n各スレッド数: {threadCount}";
             Debug.Log(log);
             await UniTask.Delay(1);
-            newFnc.InitLog(pyFile);
-            // Create 内でawait すると何故か onOut が発火しない
-            //await newFnc.WaitLoad(count);
+
+            //--------------------------------------
+            // ログ購読（_type=="log" → Unity コンソール出力）
+            //--------------------------------------
             await UniTask.SwitchToMainThread();
+            newFnc.mergedMessages
+            .Select(msg => { try { return JObject.Parse(msg); } catch { return null; } })
+            .Where(JO => JO != null && (string)JO["_type"] == "log")
+            .Subscribe(JO =>
+            {
+                string logMsg = (string)JO["_msg"] ?? "";
+                string src = (string)JO["_src"] ?? "";
+                if (!string.IsNullOrEmpty(src)) logMsg += $"\n(at {src})";
+                Debug.Log(logMsg.HexColor("#90E3C4"));
+            }).AddTo(PyAPIHandler.Compo);
+
             return newFnc;
         }
         catch (Exception e) { throw e; }
@@ -306,7 +262,6 @@ public class PyFnc
 
     ///==============================================<summary>
     /// 全プロセスの7割以上がロード完了するまで待つ
-    /// Create 内でawait すると何故か onOut が発火しない
     ///</summary>=============================================
     public async UniTask WaitLoad(int completionRate)
     {
@@ -317,7 +272,6 @@ public class PyFnc
                 Debug.LogError("completionRate は 1-10 の間で");
                 return;
             }
-            // AddTo の中身はGOかCompoなのでメインスレッドじゃないとだめ
             bool ThreadIsMain = false;
             if (Thread.CurrentThread.ManagedThreadId == 1) ThreadIsMain = true;
             if (!ThreadIsMain) await UniTask.SwitchToMainThread();
@@ -355,12 +309,17 @@ public class PyFnc
     public async void Close(int waittMilliSecond)
     {
         await UniTask.SwitchToThreadPool();
-        // 実行後即クローズされた場合アウトプットが受取れなかったりするので待つ
-        // ただしアプリ終了時は待つとパッケージ利用先では呼ばれないので最後はは待たない
         await UniTask.Delay(waittMilliSecond);
         cts.Cancel();
-        Output.Close();
-        logActive.Dispose();
+        //--------------------------------------
+        // 全 bridge に終了通知 → クローズ
+        //--------------------------------------
+        foreach (var bridge in bridges)
+        {
+            try { await bridge.Send(new JObject { ["_type"] = "close" }); } catch { }
+            bridge.Close();
+        }
+        try { mergedMessages.OnCompleted(); } catch { }
         string log = $"PyFncクローズ:{FncName} - プロセス ";
         for (int i = 0; i < children.Count; i++)
         {
@@ -375,32 +334,40 @@ public class PyFnc
 
 
     ///==============================================<summary>
-    /// 出力監視の設定
+    /// プロセスを起動し TCP 接続を確立する
     ///</summary>=============================================
-    void InitLog(string pyFile)
+    async UniTask StartChildAndConnect(System.Diagnostics.Process child)
     {
-        // アウトプット用ファイル作成;
-        OutPath = $"{pyFile.Replace("\\", "/").Replace(".py", ".txt")}";
-        Output = new SharedLog(OutPath);
-        OnRead.Subscribe(_ =>
-        {
-            if (!File.Exists(OutPath)) return; // なんかオペレータをすり抜けるのでブロックしとく
-            //Debug.Log($"ログ{File.Exists(OutPath)} {Path.GetFileName(OutPath)}");
-            Output.ReadLogFile();
-        }).AddTo(PyAPIHandler.Compo);
+        await UniTask.SwitchToThreadPool();
+        child.Start();
+        //--------------------------------------
+        // stdout から PORT:XXXXX を読み取り
+        //--------------------------------------
+        string portLine = child.StandardOutput.ReadLine();
+        if (portLine == null || !portLine.StartsWith("PORT:"))
+            throw new Exception($"ポート読み取り失敗: {portLine}");
+        int port = int.Parse(portLine.Replace("PORT:", ""));
+        Debug.Log($"TCP接続: 127.0.0.1:{port}");
+        //--------------------------------------
+        // TcpBridge 接続 → 受信ループ開始
+        //--------------------------------------
+        var bridge = new TcpBridge("127.0.0.1", port);
+        await bridge.Connect();
+        bridge.OnMessage.Subscribe(msg => mergedMessages.OnNext(msg));
+        bridge.StartReceiveLoop();
+        bridges.Add(bridge);
+        await UniTask.SwitchToMainThread();
     }
 
 
     ///==============================================<summary>
-    /// 1PyFncインスタンスで管理する全プロセスを起動
+    /// 1PyFncインスタンスで管理する全プロセスを起動（Idle モード用）
     ///</summary>=============================================
     public async void Start()
     {
         foreach (var child in children)
         {
-            await UniTask.SwitchToThreadPool();
-            child.Start();
-            await UniTask.SwitchToMainThread();
+            await StartChildAndConnect(child);
         }
     }
 
@@ -414,7 +381,6 @@ public class PyFnc
         {
             JObject outJO = null;
 
-            // AddTo の中身は GO か Compo なのでメインスレッドじゃないとだめ
             bool ThreadIsMain = false;
             if (Thread.CurrentThread.ManagedThreadId == 1) ThreadIsMain = true;
             if (!ThreadIsMain) await UniTask.SwitchToMainThread();
@@ -434,14 +400,19 @@ public class PyFnc
     }
     public void ExeBG(JObject inJO)
     {
-        children[currentChildIndex].Exe(inJO);
+        //--------------------------------------
+        // TCP 経由でデータ送信（_type を付与してコピー送信）
+        //--------------------------------------
+        var msg = new JObject(inJO);
+        msg["_type"] = "in";
+        bridges[currentChildIndex].Send(msg).Forget();
         if (currentChildIndex == children.Count - 1) currentChildIndex = 0;
         else currentChildIndex++;
     }
 
 
     ///==============================================<summary>
-    /// Wait 中の関数を実行
+    /// Wait 中の関数を実行（ワンショットモード）
     ///</summary>=============================================
     public async UniTask<JObject> Exe()
     {
@@ -449,7 +420,6 @@ public class PyFnc
         {
             JObject outJO = null;
 
-            // AddTo の中身はGOかCompoなのでメインスレッドじゃないとだめ
             bool ThreadIsMain = false;
             if (Thread.CurrentThread.ManagedThreadId == 1) ThreadIsMain = true;
             if (!ThreadIsMain) await UniTask.SwitchToMainThread();
@@ -472,13 +442,23 @@ public class PyFnc
     {
         try
         {
-            // Close するために待機
-            await children[currentChildIndex].ExeAsync(Timeout, () => Output.Close(), cts.Token);
+            var child = children[currentChildIndex];
+            //--------------------------------------
+            // プロセス起動 → TCP 接続確立
+            //--------------------------------------
+            await StartChildAndConnect(child);
+            //--------------------------------------
+            // プロセス終了を待機
+            //--------------------------------------
+            await UniTask.SwitchToThreadPool();
+            child.WaitForExit();
+            await UniTask.SwitchToMainThread();
         }
         catch (OperationCanceledException) { }
+        catch (Exception e) { Debug.LogError($"ExeBG エラー: {e.Message}"); }
         if (currentChildIndex == children.Count - 1) currentChildIndex = 0;
         else currentChildIndex++;
-        
+
         Close(100);
         GC.Collect();
     }
