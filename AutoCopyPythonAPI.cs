@@ -9,7 +9,7 @@ public class AutoCopyPythonAPI : AssetPostprocessor
 {
     public static string PJT => Application.dataPath.Replace("/Assets", "");
     public static string SourceFile => $"{PJT}/Packages/jp.maku.pyapi/Py/PyAPI.py";
-    public static string DestFile => $"{Application.dataPath}/Py/PyAPI.py";
+    public static string DestFile => $"{Application.dataPath}/StreamingAssets/Py/PyAPI.py";
 
     //static string destDirName = "PythonAssets";
     //static string destFileName = "PyAPI.py";
