@@ -84,7 +84,7 @@ public class PyAPI
             string pyFile = @$"{PyDir}\{pyFileName}";
             if (!File.Exists(PyInterpFile)) throw new Exception($"次の実行ファイルは無い{PyInterpFile}");
             if (!File.Exists(pyFile)) throw new Exception($"次のPyファイルは無い{pyFile}");
-            PyFnc pyFnc = await PyFnc.Create(PyInterpFile, pyFile, inJO, largeInput: largeInput);
+            PyFnc pyFnc = await PyFnc.Create(PyInterpFile, pyFile, inJO, timeout: timeout, largeInput: largeInput);
             GC.Collect();
             return pyFnc;
         }
@@ -349,9 +349,38 @@ public class PyFnc
         await UniTask.SwitchToThreadPool();
         child.Start();
         //--------------------------------------
-        // stdout から PORT:XXXXX を読み取り
+        // stdout から PORT:XXXXX を読み取り（タイムアウト付き）
         //--------------------------------------
-        string portLine = child.StandardOutput.ReadLine();
+        float timeoutSec = Timeout > 0 ? Timeout : 30f;
+        var readTask = System.Threading.Tasks.Task.Run(() => child.StandardOutput.ReadLine());
+        var completed = await System.Threading.Tasks.Task.WhenAny(
+            readTask,
+            System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(timeoutSec))
+        );
+
+        if (completed != readTask)
+        {
+            //--------------------------------------
+            // タイムアウト：stderr からエラー情報を取得してから Kill
+            //--------------------------------------
+            string stderr = "";
+            try
+            {
+                var stderrTask = System.Threading.Tasks.Task.Run(
+                    () => child.StandardError.ReadToEnd());
+                if (await System.Threading.Tasks.Task.WhenAny(
+                    stderrTask,
+                    System.Threading.Tasks.Task.Delay(2000)) == stderrTask)
+                    stderr = stderrTask.Result;
+            }
+            catch { }
+            child.PerfectKill();
+            throw new TimeoutException(
+                $"Python起動タイムアウト({timeoutSec}秒): {FncName}" +
+                (string.IsNullOrEmpty(stderr) ? "" : $"\nstderr: {stderr}"));
+        }
+
+        string portLine = readTask.Result;
         if (portLine == null || !portLine.StartsWith("PORT:"))
             throw new Exception($"ポート読み取り失敗: {portLine}");
         int port = int.Parse(portLine.Replace("PORT:", ""));
