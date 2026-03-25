@@ -169,7 +169,11 @@ public class PyFnc
     .Select(msg =>
     {
         try { return JObject.Parse(msg); }
-        catch (Exception e) { throw new Exception($"JSONパースエラー: {e.Message}"); }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[PyFnc:{FncName}] 不正なJSON受信（スキップ）: {e.Message}");
+            return null;
+        }
     })
     .Where(JO => JO != null)
     .Where(JO => (string)JO["_type"] == "out")
@@ -183,7 +187,11 @@ public class PyFnc
     .Select(msg =>
     {
         try { return JObject.Parse(msg); }
-        catch (Exception e) { throw new Exception($"JSONパースエラー: {e.Message}"); }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[PyFnc:{FncName}] 不正なJSON受信（スキップ）: {e.Message}");
+            return null;
+        }
     })
     .Where(JO => JO != null)
     .Where(JO => (string)JO["_type"] == "loaded");
