@@ -32,6 +32,7 @@ public class PyAPI
     //--------------------------------------
     public string PyInterpFile { get; }
     public string PyDir { get; }
+    Dictionary<string, PyFnc> idleCache = new();
 
 
     /// <param name="pyDir">ラップする .py ファイルのがある Dir</param>
@@ -47,10 +48,12 @@ public class PyAPI
     ///==============================================<summary>
     /// 高速実行したい関数を作成してアイドリングさせる
     ///</summary>=============================================
-    public async UniTask<PyFnc> Idle(string pyFileName, int processCount = 1, int threadCount = 1)
+    public async UniTask<PyFnc> Idle(string pyFileName, int processCount = 1, int threadCount = 1, int completionRate = 7)
     {
         try
         {
+            if (idleCache.TryGetValue(pyFileName, out var cached) && !cached.IsClosed)
+                return cached;
             string pyFile = @$"{PyDir}\{pyFileName}";
             if (!File.Exists(PyInterpFile)) throw new Exception($"次の実行ファイルは無い{PyInterpFile}");
             if (!File.Exists(pyFile)) throw new Exception($"次のPyファイルは無い{pyFile}");
@@ -58,7 +61,9 @@ public class PyAPI
             if (processCount <= 1) pyFnc = await PyFnc.Create(PyInterpFile, pyFile);
             else pyFnc = await PyFnc.Create(PyInterpFile, pyFile, processCount: processCount, threadCount: threadCount);
             pyFnc.Start();
+            await pyFnc.WaitLoad(completionRate);
             GC.Collect();
+            idleCache[pyFileName] = pyFnc;
             return pyFnc;
         }
         catch (Exception e) { throw e; }
@@ -142,6 +147,7 @@ public class PyFnc
     // パブリック
     //--------------------------------------
     public string FncName { get; private set; }
+    public bool IsClosed { get; private set; }
     //--------------------------------------
     // プライベート
     //--------------------------------------
@@ -308,6 +314,8 @@ public class PyFnc
     ///</summary>=============================================
     public async void Close(int waittMilliSecond)
     {
+        if (IsClosed) return;
+        IsClosed = true;
         await UniTask.SwitchToThreadPool();
         await UniTask.Delay(waittMilliSecond);
         cts.Cancel();
@@ -408,6 +416,15 @@ public class PyFnc
         bridges[currentChildIndex].Send(msg).Forget();
         if (currentChildIndex == children.Count - 1) currentChildIndex = 0;
         else currentChildIndex++;
+    }
+    ///==============================================<summary>
+    /// Idle 中の関数をバックグラウンドで実行（スレッド切替込み）
+    ///</summary>=============================================
+    public async UniTask ExeBGAsync(JObject inJO)
+    {
+        await UniTask.SwitchToThreadPool();
+        ExeBG(inJO);
+        await UniTask.SwitchToMainThread();
     }
 
 
