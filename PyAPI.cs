@@ -382,7 +382,26 @@ public class PyFnc
 
         string portLine = readTask.Result;
         if (portLine == null || !portLine.StartsWith("PORT:"))
-            throw new Exception($"ポート読み取り失敗: {portLine}");
+        {
+            //--------------------------------------
+            // ポート読み取り失敗：stderr からエラー情報を取得してから Kill
+            //--------------------------------------
+            string stderr = "";
+            try
+            {
+                var stderrTask = System.Threading.Tasks.Task.Run(
+                    () => child.StandardError.ReadToEnd());
+                if (await System.Threading.Tasks.Task.WhenAny(
+                    stderrTask,
+                    System.Threading.Tasks.Task.Delay(2000)) == stderrTask)
+                    stderr = stderrTask.Result;
+            }
+            catch { }
+            child.PerfectKill();
+            throw new Exception(
+                $"ポート読み取り失敗: {portLine}" +
+                (string.IsNullOrEmpty(stderr) ? "" : $"\nstderr: {stderr}"));
+        }
         int port = int.Parse(portLine.Replace("PORT:", ""));
         Debug.Log($"TCP接続: 127.0.0.1:{port}");
         //--------------------------------------
